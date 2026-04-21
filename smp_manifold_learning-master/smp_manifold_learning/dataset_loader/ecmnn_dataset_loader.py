@@ -36,10 +36,16 @@ class ECMNNDatasetLoader(DatasetLoader):
         is_aligning_lpca_normal_space_eigvecs = kwargs.get('is_aligning_lpca_normal_space_eigvecs', True)
         N_normal_space_eigvecs_alignment_repetition = kwargs.get('N_normal_space_eigvecs_alignment_repetition', 1)
         is_augmenting_w_rand_comb_of_normaleigvecs = kwargs.get('is_augmenting_w_rand_comb_of_normaleigvecs', True)
+        max_rand_comb_normal_dim = kwargs.get('max_rand_comb_normal_dim', 3)
+        aug_epsilon_mult_override = kwargs.get('aug_epsilon_mult_override', None)
         N_siam_same_levelvec = kwargs.get('N_siam_same_levelvec', 5)
         N_local_neighborhood_mult = kwargs.get('N_local_neighborhood_mult', 1)
         N_local_neighborhood_mult = float(N_local_neighborhood_mult)
         dim_normal_space_override = kwargs.get('dim_normal_space_override', None)
+        if max_rand_comb_normal_dim is not None:
+            max_rand_comb_normal_dim = int(max_rand_comb_normal_dim)
+        if aug_epsilon_mult_override is not None:
+            aug_epsilon_mult_override = float(aug_epsilon_mult_override)
 
         if is_optimizing_signed_siamese_pairs or is_computing_all_cost_components:
             onmanif_siam_same_levelvecs_list = list()
@@ -143,7 +149,13 @@ class ECMNNDatasetLoader(DatasetLoader):
         print("Tangent Space Dimensionality = %d" % dim_tangent_space)
         print("Normal  Space Dimensionality = %d" % dim_normal_space)
         assert(dim_normal_space >= 1)
-        N_aug_rand_normal_space_vecs = (4 ** dim_normal_space)
+        rand_comb_dim = dim_normal_space
+        if max_rand_comb_normal_dim is not None:
+            rand_comb_dim = min(dim_normal_space, max_rand_comb_normal_dim)
+            if rand_comb_dim < dim_normal_space:
+                print("[warn] [ecomann-aug] Capping randomized normal-space combination dim "
+                      "from %d to %d." % (dim_normal_space, rand_comb_dim))
+        N_aug_rand_normal_space_vecs = (4 ** rand_comb_dim)
 
         # some Eigenvalue statistics of the Local PCA:
         max_eigval = np.max(dataset_dict['cov_svd_s'])
@@ -152,7 +164,9 @@ class ECMNNDatasetLoader(DatasetLoader):
         max_tangent_eigval = np.max(dataset_dict['cov_svd_s'][:, :dim_tangent_space])
         min_tangent_eigval = np.min(dataset_dict['cov_svd_s'][:, :dim_tangent_space])
         mean_tangent_eigval = np.mean(dataset_dict['cov_svd_s'][:, :dim_tangent_space])
-        epsilon = N_local_neighborhood_mult * np.sqrt(mean_tangent_eigval)
+        epsilon_mult = (N_local_neighborhood_mult if aug_epsilon_mult_override is None
+                        else aug_epsilon_mult_override)
+        epsilon = epsilon_mult * np.sqrt(mean_tangent_eigval)
 
         print("Maximum Eigenvalue  = %f" % max_eigval)
         print("Minimum Eigenvalue  = %f" % min_eigval)
@@ -160,7 +174,10 @@ class ECMNNDatasetLoader(DatasetLoader):
         print("Maximum Tangent Space Eigenvalue  = %f" % max_tangent_eigval)
         print("Minimum Tangent Space Eigenvalue  = %f" % min_tangent_eigval)
         print("Mean Tangent Space Eigenvalue     = %f" % mean_tangent_eigval)
+        print("Epsilon Multiplier  = %f" % epsilon_mult)
         print("Epsilon             = %f" % epsilon)
+        print("RandComb Normal Dim = %d" % rand_comb_dim)
+        print("N_aug_rand_normal_space_vecs = %d" % N_aug_rand_normal_space_vecs)
 
         # extract Tangent Space Eigenvectors and Normal Space Eigenvectors:
         dataset_dict['cov_rowspace'] = dataset_dict['cov_svd_V'][:, :, :dim_tangent_space]

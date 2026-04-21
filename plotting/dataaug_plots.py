@@ -586,7 +586,7 @@ def plot_loss_curves(history: Dict[str, List[float]], out_path: str, title: str,
             ema.append(alpha * ema[-1] + (1 - alpha) * val)
         return ema
 
-    loss_keys = ["loss_on", "loss_off", "loss_total"]
+    loss_keys = ["loss_on", "loss_off", "loss_eikonal", "loss_total"]
     for key in loss_keys:
         vals = history.get(key, [])
         if vals:
@@ -598,7 +598,7 @@ def plot_loss_curves(history: Dict[str, List[float]], out_path: str, title: str,
     axes[0].grid(True, alpha=0.25)
     axes[0].legend(fontsize=8)
 
-    w_keys = ["w_loss_on", "w_loss_off"]
+    w_keys = ["w_loss_on", "w_loss_off", "w_loss_eikonal"]
     for key in w_keys:
         vals = history.get(key, [])
         if vals:

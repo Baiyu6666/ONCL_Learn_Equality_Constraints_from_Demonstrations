@@ -20,7 +20,7 @@ _REPO_ROOT = os.path.abspath(os.path.join(_THIS_DIR, ".."))
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
-from models.planner import plan_path
+from models.planner import build_linear_path, plan_path
 from analyze.plan_sine_pose_from_learned_constraint import (
     DATASET_NAME,
     DEFAULT_CKPT,
@@ -29,12 +29,14 @@ from analyze.plan_sine_pose_from_learned_constraint import (
     _error_to_true_constraint,
     _load_model,
     _planner_cfg,
+    _point_project_path,
     _plot_error_distribution_paper,
     _resolve_path,
     _rpy_zyx_to_local_z,
     _save_pointwise_csv,
     _workspace_surface_z_and_normal_from_xy,
 )
+from datasets.constraint_datasets import sine_surface_apply_affine_xy
 
 
 def _normalize(v: np.ndarray) -> np.ndarray:
@@ -67,14 +69,29 @@ def _generate_highfreq_waypoints(
     y_end: float,
     amp_x: float,
     snake_freq: float,
+    surface_cfg: Any | None = None,
 ) -> np.ndarray:
     t = np.linspace(0.0, 1.0, int(max(3, n_waypoints)), dtype=np.float32)
-    # Snake sweep: y monotonically goes from positive to negative, x oscillates.
-    y = float(y_start) + (float(y_end) - float(y_start)) * t
-    x = float(x_center) + float(amp_x) * np.sin(2.0 * np.pi * float(snake_freq) * t)
-    x = np.clip(x, -1.9, 1.9)
-    y = np.clip(y, -1.9, 1.9)
-    z, nvec = _workspace_surface_z_and_normal_from_xy(x.astype(np.float32), y.astype(np.float32))
+    # Waypoint parameters are specified in the canonical sine workspace and
+    # then mapped into the current environment scale/offset.
+    y_base = float(y_start) + (float(y_end) - float(y_start)) * t
+    y_mid = 0.5 * (float(y_start) + float(y_end))
+    y_base = y_mid + 1.10 * (y_base - y_mid)
+    x_base = float(x_center) + float(amp_x) * np.sin(2.0 * np.pi * float(snake_freq) * t)
+    x_base = np.clip(x_base, -1.9, 1.9).astype(np.float32)
+    y_base = np.clip(y_base, -1.9, 1.9).astype(np.float32)
+    xy = sine_surface_apply_affine_xy(
+        np.stack([x_base, y_base], axis=1).astype(np.float32),
+        surface_cfg,
+    )
+    x = xy[:, 0].astype(np.float32)
+    y = xy[:, 1].astype(np.float32)
+    if len(x) >= 5:
+        # Widen the sweep near the ends so the path reads more clearly as a
+        # left-to-right cleaning motion over the surface patch.
+        x[:2] -= 0.028
+        x[-3:] += 0.028
+    z, nvec = _workspace_surface_z_and_normal_from_xy(x.astype(np.float32), y.astype(np.float32), surface_cfg)
     pos = np.stack([x, y, z], axis=1).astype(np.float32)
 
     tang = np.zeros_like(pos, dtype=np.float32)
@@ -100,23 +117,46 @@ def _plan_waypoint_chain(
     cfg: Any,
     waypoints: np.ndarray,
     seg_waypoints: int,
+    planner_mode: str,
 ) -> tuple[np.ndarray, list[float]]:
     full: list[np.ndarray] = []
     plan_times: list[float] = []
+    planner_mode_norm = str(planner_mode).strip().lower()
+    if planner_mode_norm not in {"traj_opt", "point_project"}:
+        raise ValueError(f"unsupported planner_mode: {planner_mode}")
     for i in range(waypoints.shape[0] - 1):
         s = waypoints[i]
         g = waypoints[i + 1]
         t0 = time.time()
-        seg = plan_path(
-            model=model,
-            x_start=s,
-            x_goal=g,
-            cfg=cfg,
-            planner_name="traj_opt",
-            n_waypoints=int(seg_waypoints),
-            dataset_name=DATASET_NAME,
-            periodic_joint=False,
-        ).astype(np.float32)
+        if planner_mode_norm == "traj_opt":
+            seg = plan_path(
+                model=model,
+                x_start=s,
+                x_goal=g,
+                cfg=cfg,
+                planner_name="traj_opt",
+                n_waypoints=int(seg_waypoints),
+                dataset_name=DATASET_NAME,
+                periodic_joint=False,
+            ).astype(np.float32)
+        else:
+            init = build_linear_path(
+                np.asarray(s, dtype=np.float32),
+                np.asarray(g, dtype=np.float32),
+                n_waypoints=int(seg_waypoints),
+                periodic=False,
+            ).astype(np.float32)
+            seg = _point_project_path(
+                model,
+                init,
+                x_start=s,
+                x_goal=g,
+                device=str(cfg.device),
+                proj_steps=int(cfg.projector["steps"]),
+                proj_alpha=float(cfg.projector["alpha"]),
+                proj_min_steps=int(cfg.projector["min_steps"]),
+                f_abs_stop=None,
+            ).astype(np.float32)
         plan_times.append(float(time.time() - t0))
         if i == 0:
             full.append(seg)
@@ -131,11 +171,24 @@ def _plot_waypoints_cleaning_paper(
     waypoints: np.ndarray,
     traj: np.ndarray,
     out_path: str,
+    surface_cfg: Any | None = None,
 ) -> None:
-    gx = np.linspace(-2.0, 2.0, 120).astype(np.float32)
-    gy = np.linspace(-2.0, 2.0, 120).astype(np.float32)
+    grid_xy = sine_surface_apply_affine_xy(
+        np.asarray(
+            [
+                [-2.0, -2.0],
+                [-2.0, 2.0],
+                [2.0, -2.0],
+                [2.0, 2.0],
+            ],
+            dtype=np.float32,
+        ),
+        surface_cfg,
+    )
+    gx = np.linspace(float(np.min(grid_xy[:, 0])), float(np.max(grid_xy[:, 0])), 120).astype(np.float32)
+    gy = np.linspace(float(np.min(grid_xy[:, 1])), float(np.max(grid_xy[:, 1])), 120).astype(np.float32)
     gxx, gyy = np.meshgrid(gx, gy)
-    z_grid, _ = _workspace_surface_z_and_normal_from_xy(gxx.reshape(-1), gyy.reshape(-1))
+    z_grid, _ = _workspace_surface_z_and_normal_from_xy(gxx.reshape(-1), gyy.reshape(-1), surface_cfg)
     z_grid = z_grid.reshape(gxx.shape)
 
     with plt.rc_context(
@@ -203,8 +256,10 @@ def _plot_waypoints_cleaning_paper(
         ax.set_ylabel("y", fontsize=8, labelpad=1)
         ax.set_zlabel("z", fontsize=8, labelpad=1)
         ax.tick_params(labelsize=7, pad=0)
-        ax.set_xlim(-2.2, 2.2)
-        ax.set_ylim(-2.2, 2.2)
+        x_pad = 0.05 * float(np.max(gx) - np.min(gx))
+        y_pad = 0.05 * float(np.max(gy) - np.min(gy))
+        ax.set_xlim(float(np.min(gx) - x_pad), float(np.max(gx) + x_pad))
+        ax.set_ylim(float(np.min(gy) - y_pad), float(np.max(gy) + y_pad))
         z_vals_surface = np.asarray(z_grid[np.isfinite(z_grid)], dtype=np.float32)
         z_vals_traj = traj[:, 2].astype(np.float32)
         z_all = np.concatenate([z_vals_surface, z_vals_traj], axis=0)
@@ -251,6 +306,7 @@ def main() -> None:
     parser.add_argument("--curve-y-end", type=float, default=-1.35, help="Snake end y (negative side).")
     parser.add_argument("--seg-waypoints", type=int, default=52, help="Trajectory waypoints per segment.")
 
+    parser.add_argument("--planner-mode", choices=["traj_opt", "point_project"], default="traj_opt", help="Planning mode.")
     parser.add_argument("--opt-steps", type=int, default=1240, help="traj_opt iterations.")
     parser.add_argument("--opt-lr", type=float, default=0.01, help="traj_opt learning rate.")
     parser.add_argument("--lam-manifold", type=float, default=1.0, help="Manifold loss weight.")
@@ -269,6 +325,7 @@ def main() -> None:
     np.random.seed(int(args.seed))
     device = _choose_device(str(args.device))
     model, ckpt = _load_model(ckpt_path, device=device)
+    surface_cfg = SimpleNamespace(**dict(ckpt.get("cfg", {})))
     _x_train, _pool = _build_data_pool(ckpt, seed=int(args.seed))
 
     cfg = _planner_cfg(
@@ -296,12 +353,14 @@ def main() -> None:
         y_end=float(args.curve_y_end),
         amp_x=float(args.curve_amp_x),
         snake_freq=float(args.snake_freq),
+        surface_cfg=surface_cfg,
     )
     traj, plan_times = _plan_waypoint_chain(
         model=model,
         cfg=cfg,
         waypoints=waypoints,
         seg_waypoints=int(args.seg_waypoints),
+        planner_mode=str(args.planner_mode),
     )
 
     pos_err, ang_err_deg = _error_to_true_constraint(traj.astype(np.float32))
@@ -311,7 +370,7 @@ def main() -> None:
     _save_pointwise_csv(point_csv, [pseudo_case], pos_err, ang_err_deg)
 
     traj_fig = os.path.join(outdir, "sinepose_waypoints_planning.png")
-    _plot_waypoints_cleaning_paper(waypoints=waypoints, traj=traj, out_path=traj_fig)
+    _plot_waypoints_cleaning_paper(waypoints=waypoints, traj=traj, out_path=traj_fig, surface_cfg=surface_cfg)
     dist_fig = os.path.join(outdir, "sinepose_waypoints_error_distribution_paper.png")
     _plot_error_distribution_paper(pos_err=pos_err, ang_err_deg=ang_err_deg, out_path=dist_fig)
 

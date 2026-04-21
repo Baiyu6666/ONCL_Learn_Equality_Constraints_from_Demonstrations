@@ -1,0 +1,10 @@
+{
+  "epochs": 2000,
+  "lr": 0.0003,
+  "knn_norm_estimation_ratio": 0.04,
+  "knn_norm_estimation_min_points": 16,
+  "sigmas": [0.4],
+  "use_knn_filter": true,
+  "knn_off_data_filter_ratio": 0.02,
+  "knn_off_data_filter_min_points": 4
+}

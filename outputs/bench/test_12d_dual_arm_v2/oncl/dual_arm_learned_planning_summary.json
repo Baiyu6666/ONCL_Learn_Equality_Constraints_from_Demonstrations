@@ -1,0 +1,206 @@
+{
+  "ckpt": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/test_12d_dual_arm_v2/oncl/12d_dual_arm_traj_oncl_model.pt",
+  "dataset": "12d_dual_arm_traj",
+  "method": "oncl",
+  "seed": 1122,
+  "n_trajs": 3,
+  "n_waypoints": 80,
+  "init_mode": "center",
+  "planner": {
+    "opt_steps": 200,
+    "opt_lr": 0.0002,
+    "lam_manifold": 0.2,
+    "lam_len_joint": 0.03,
+    "opt_lam_smooth": 0.1,
+    "lam_ref_path": 5.0,
+    "trust_scale": 0.03,
+    "obstacle_enable": false,
+    "bound_indices": [
+      2,
+      8
+    ],
+    "bound_lo": 0.56,
+    "bound_hi": 0.8
+  },
+  "paths": [
+    {
+      "left_pos_err_mean": 0.016946202144026756,
+      "left_pos_err_max": 0.037915874272584915,
+      "right_pos_err_mean": 0.03433186933398247,
+      "right_pos_err_max": 0.07752867788076401,
+      "left_ori_err_deg_mean": 0.9575629234313965,
+      "left_ori_err_deg_max": 4.66841459274292,
+      "right_ori_err_deg_mean": 0.9605804681777954,
+      "right_ori_err_deg_max": 4.68316125869751,
+      "center_err_mean": 0.01951497420668602,
+      "center_err_max": 0.036721087992191315,
+      "span_err_mean": 0.009947305545210838,
+      "span_err_max": 0.02437382936477661,
+      "analytic_vector_dist_mean": 0.0593084916472435,
+      "analytic_vector_dist_max": 0.18015742301940918,
+      "model_residual_mean": 0.04085119068622589,
+      "model_residual_max": 0.0630602166056633,
+      "center_path_length": 0.5117672085762024,
+      "plan_seconds": 1.0287201404571533,
+      "index": 0,
+      "start_center": [
+        0.2957143783569336,
+        0.10567142069339752,
+        0.7345064282417297
+      ],
+      "goal_center": [
+        -0.16158264875411987,
+        -0.1084299236536026,
+        0.7297843098640442
+      ]
+    },
+    {
+      "left_pos_err_mean": 0.055380500853061676,
+      "left_pos_err_max": 0.11098546534776688,
+      "right_pos_err_mean": 0.028783494606614113,
+      "right_pos_err_max": 0.04438944533467293,
+      "left_ori_err_deg_mean": 1.5084835290908813,
+      "left_ori_err_deg_max": 5.1826252937316895,
+      "right_ori_err_deg_mean": 1.510231852531433,
+      "right_ori_err_deg_max": 5.203603267669678,
+      "center_err_mean": 0.03888867050409317,
+      "center_err_max": 0.06755198538303375,
+      "span_err_mean": 0.026133831590414047,
+      "span_err_max": 0.04070913791656494,
+      "analytic_vector_dist_mean": 0.08607830107212067,
+      "analytic_vector_dist_max": 0.21467933058738708,
+      "model_residual_mean": 0.06119842454791069,
+      "model_residual_max": 0.10134531557559967,
+      "center_path_length": 0.4823254346847534,
+      "plan_seconds": 0.44234538078308105,
+      "index": 1,
+      "start_center": [
+        -0.28883931040763855,
+        -0.10827800631523132,
+        0.7359402179718018
+      ],
+      "goal_center": [
+        0.13415274024009705,
+        0.09666313230991364,
+        0.6435597538948059
+      ]
+    },
+    {
+      "left_pos_err_mean": 0.06175346300005913,
+      "left_pos_err_max": 0.1404600292444229,
+      "right_pos_err_mean": 0.03623160719871521,
+      "right_pos_err_max": 0.05631771311163902,
+      "left_ori_err_deg_mean": 1.9066416025161743,
+      "left_ori_err_deg_max": 7.715307712554932,
+      "right_ori_err_deg_mean": 1.9047224521636963,
+      "right_ori_err_deg_max": 7.706501007080078,
+      "center_err_mean": 0.04520459845662117,
+      "center_err_max": 0.0830235555768013,
+      "span_err_mean": 0.029973452910780907,
+      "span_err_max": 0.046042680740356445,
+      "analytic_vector_dist_mean": 0.10453303158283234,
+      "analytic_vector_dist_max": 0.30528879165649414,
+      "model_residual_mean": 0.07097172737121582,
+      "model_residual_max": 0.12583330273628235,
+      "center_path_length": 0.5171887874603271,
+      "plan_seconds": 0.4445779323577881,
+      "index": 2,
+      "start_center": [
+        -0.3177427649497986,
+        -0.09571370482444763,
+        0.6197199821472168
+      ],
+      "goal_center": [
+        0.14637482166290283,
+        0.10237140953540802,
+        0.7170614004135132
+      ]
+    }
+  ],
+  "error_distributions": {
+    "mean_pos_err": {
+      "init": {
+        "mean": 0.033331383019685745,
+        "median": 0.03425092622637749,
+        "p95": 0.06906718015670776,
+        "max": 0.07340166717767715
+      },
+      "planned": {
+        "mean": 0.038904525339603424,
+        "median": 0.03407445549964905,
+        "p95": 0.08074808865785599,
+        "max": 0.0876939445734024
+      }
+    },
+    "mean_ori_err_deg": {
+      "init": {
+        "mean": 0.01239900290966034,
+        "median": 0.0,
+        "p95": 0.05595290660858154,
+        "max": 0.09278740733861923
+      },
+      "planned": {
+        "mean": 1.4580371379852295,
+        "median": 0.8548200130462646,
+        "p95": 5.130803108215332,
+        "max": 7.710904121398926
+      }
+    },
+    "analytic_vector_dist": {
+      "init": {
+        "mean": 0.04720102250576019,
+        "median": 0.048458561301231384,
+        "p95": 0.09767837822437286,
+        "max": 0.10381337255239487
+      },
+      "planned": {
+        "mean": 0.08330661803483963,
+        "median": 0.06283849477767944,
+        "p95": 0.2126896232366562,
+        "max": 0.30528879165649414
+      }
+    },
+    "model_residual": {
+      "init": {
+        "mean": 0.04819643497467041,
+        "median": 0.04819978401064873,
+        "p95": 0.09662473946809769,
+        "max": 0.10166611522436142
+      },
+      "planned": {
+        "mean": 0.057673778384923935,
+        "median": 0.051855314522981644,
+        "p95": 0.11389604955911636,
+        "max": 0.12583330273628235
+      }
+    },
+    "center_err": {
+      "init": {
+        "mean": 0.033329226076602936,
+        "median": 0.03425092622637749,
+        "p95": 0.06906718015670776,
+        "max": 0.07340165972709656
+      },
+      "planned": {
+        "mean": 0.034536078572273254,
+        "median": 0.031088408082723618,
+        "p95": 0.07787901163101196,
+        "max": 0.0830235555768013
+      }
+    },
+    "span_err": {
+      "init": {
+        "mean": 1.912315639174267e-08,
+        "median": 0.0,
+        "p95": 5.960464477539063e-08,
+        "max": 1.1920928955078125e-07
+      },
+      "planned": {
+        "mean": 0.022018196061253548,
+        "median": 0.020011305809020996,
+        "p95": 0.04560590162873268,
+        "max": 0.046042680740356445
+      }
+    }
+  }
+}

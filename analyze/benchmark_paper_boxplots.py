@@ -20,6 +20,7 @@ PAPER_DATASETS = [
     "3d_torus_surface_traj",
     "6d_spatial_arm_up_n6_py_traj",
     "6d_workspace_sine_surface_pose_traj",
+    "12d_dual_arm_traj"
 ]
 
 PAPER_DATASET_LABELS = {
@@ -33,6 +34,7 @@ PAPER_DATASET_LABELS = {
     "3d_torus_surface_traj": "3DTorus",
     "6d_spatial_arm_up_n6_py_traj": "6DArmUp",
     "6d_workspace_sine_surface_pose_traj": "6DSinePose",
+    "12d_dual_arm_traj": "12DDualArm",
 }
 
 METRIC_DISPLAY_LABELS = {
@@ -70,6 +72,13 @@ TRAIN_TIME_TABLE_DATASETS = [
     "6d_spatial_arm_up_n6_py_traj",
 ]
 
+CODIM_COMPARE_DATASETS = [
+    "3d_spatial_arm_ellip_n3_traj",
+    "3d_vz_2d_ellipse_traj",
+    "6d_workspace_sine_surface_pose_traj",
+    "6d_spatial_arm_up_n6_py_traj",
+]
+
 CODIM_HINTS = {
     "2d_ellipse": 1,
     "2d_planar_arm_line_n2": 1,
@@ -88,6 +97,7 @@ CODIM_HINTS = {
     "6d_workspace_sine_surface_pose_traj": 2,
     "6d_spatial_arm_up_n6_py": 2,
     "6d_spatial_arm_up_n6_py_traj": 2,
+    "12d_dual_arm_traj": 10,
 }
 
 METHOD_DISPLAY_LABELS = {
@@ -293,11 +303,10 @@ def _plot_paper_disterror_grouped_bar(
 
     n_ds = len(datasets)
     n_m = max(1, len(methods))
-    # Paper double-column friendly size, close to traj-vs-scatter styling.
-    fig, ax = plt.subplots(figsize=(7.1, 2.75))
-
     x = np.arange(n_ds, dtype=np.float32)
     width = 0.82 / n_m
+    # Paper double-column friendly size, close to traj-vs-scatter styling.
+    fig, ax = plt.subplots(figsize=(7.1, 2.75))
     for mi, m in enumerate(methods):
         pos = x + (mi - (n_m - 1) / 2.0) * width
         ax.bar(
@@ -399,7 +408,11 @@ def _plot_codim_gt1_oncl_compare(
     if any(m not in seen_methods for m in methods):
         return
 
-    ds_gt1 = [d for d in datasets if int(CODIM_HINTS.get(str(d), 1)) > 1]
+    allowed = set(CODIM_COMPARE_DATASETS)
+    ds_gt1 = [
+        d for d in datasets
+        if d in allowed and int(CODIM_HINTS.get(str(d), 1)) > 1
+    ]
     if not ds_gt1:
         return
 

@@ -31,6 +31,8 @@ parser.add_argument("-u", "--is_performing_data_augmentation", default=1, type=i
 parser.add_argument("-s", "--is_optimizing_signed_siamese_pairs", default=1, type=int)
 parser.add_argument("-a", "--is_aligning_lpca_normal_space_eigvecs", default=1, type=int)
 parser.add_argument("-c", "--is_augmenting_w_rand_comb_of_normaleigvecs", default=1, type=int)
+parser.add_argument("--max_rand_comb_normal_dim", default=3, type=int)
+parser.add_argument("--aug_epsilon_mult_override", default=None, type=float)
 parser.add_argument("-r", "--rand_seed", default=38, type=int)
 parser.add_argument("-p", "--plot_save_dir", default='../plot/ecmnn/', type=str)
 parser.add_argument("-v", "--aug_dataloader_save_dir", default='../plot/ecmnn/', type=str)
@@ -154,7 +156,8 @@ def train_ecmnn(dataset_filepath, initial_learning_rate=0.001, weight_decay=0.0,
                 is_augmenting_w_rand_comb_of_normaleigvecs=True, rand_seed=38,
                 plot_save_dir='../plot/ecmnn/', is_using_logged_aug_dataloader=False,
                 aug_dataloader_save_dir='../plot/ecmnn/', siam_mode='all',
-                N_local_neighborhood_mult=1):
+                N_local_neighborhood_mult=1, max_rand_comb_normal_dim=3,
+                aug_epsilon_mult_override=None):
 
     if device == "gpu" and torch.cuda.is_available():
         DEVICE = torch.device('cuda:0')
@@ -179,7 +182,9 @@ def train_ecmnn(dataset_filepath, initial_learning_rate=0.001, weight_decay=0.0,
                                 clean_aug_data=clean_aug_data,
                                 is_aligning_lpca_normal_space_eigvecs=is_aligning_lpca_normal_space_eigvecs,
                                 is_augmenting_w_rand_comb_of_normaleigvecs=is_augmenting_w_rand_comb_of_normaleigvecs,
-                                rand_seed=rand_seed, N_local_neighborhood_mult=N_local_neighborhood_mult)
+                                rand_seed=rand_seed, N_local_neighborhood_mult=N_local_neighborhood_mult,
+                                max_rand_comb_normal_dim=max_rand_comb_normal_dim,
+                                aug_epsilon_mult_override=aug_epsilon_mult_override)
             pickle.dump(aug_dataloader, aug_dataloader_output, pickle.HIGHEST_PROTOCOL)
 
     [batch_train_loader, _, _,
@@ -195,7 +200,9 @@ def train_ecmnn(dataset_filepath, initial_learning_rate=0.001, weight_decay=0.0,
                                                 is_aligning_lpca_normal_space_eigvecs=False,
                                                 is_augmenting_w_rand_comb_of_normaleigvecs=False,
                                                 rand_seed=rand_seed,
-                                                N_local_neighborhood_mult=N_local_neighborhood_mult)
+                                                N_local_neighborhood_mult=N_local_neighborhood_mult,
+                                                max_rand_comb_normal_dim=max_rand_comb_normal_dim,
+                                                aug_epsilon_mult_override=aug_epsilon_mult_override)
 
     # this one is only for evaluation for RSS 2020 Learning (in) TAMP Workshop; may be removed in the future...
     [_, _, _, _, _, _, all_on_manifold_dataset
@@ -466,4 +473,6 @@ if __name__ == '__main__':
                 rand_seed=rand_seed, plot_save_dir=plot_save_dir,
                 is_using_logged_aug_dataloader=is_using_logged_aug_dataloader,
                 aug_dataloader_save_dir=aug_dataloader_save_dir, siam_mode=siam_mode,
-                N_local_neighborhood_mult=N_local_neighborhood_mult)
+                N_local_neighborhood_mult=N_local_neighborhood_mult,
+                max_rand_comb_normal_dim=args.max_rand_comb_normal_dim,
+                aug_epsilon_mult_override=args.aug_epsilon_mult_override)

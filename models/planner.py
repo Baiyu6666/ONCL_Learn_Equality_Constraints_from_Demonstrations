@@ -91,6 +91,171 @@ def build_linear_path(
     return path
 
 
+def _build_piecewise_linear_path(
+    x_start: np.ndarray,
+    x_mid: np.ndarray,
+    x_goal: np.ndarray,
+    *,
+    n_waypoints: int,
+    periodic: bool,
+) -> np.ndarray:
+    n = int(max(3, n_waypoints))
+    n1 = max(2, n // 2 + 1)
+    n2 = max(2, n - n1 + 1)
+    p1 = build_linear_path(x_start, x_mid, n_waypoints=n1, periodic=periodic)
+    p2 = build_linear_path(x_mid, x_goal, n_waypoints=n2, periodic=periodic)
+    out = np.concatenate([p1[:-1], p2], axis=0).astype(np.float32)
+    if len(out) != n:
+        idx = np.linspace(0, len(out) - 1, n).astype(np.int32)
+        out = out[idx].astype(np.float32)
+    out[0] = x_start.astype(np.float32)
+    out[-1] = x_goal.astype(np.float32)
+    return out
+
+
+def _build_obstacle_arc_init_path(
+    x_start: np.ndarray,
+    x_goal: np.ndarray,
+    *,
+    n_waypoints: int,
+    periodic: bool,
+    obstacle_center_xy: tuple[float, float],
+    obstacle_radius: float,
+    obstacle_margin: float,
+    side_sign: float,
+) -> np.ndarray:
+    start = np.asarray(x_start, dtype=np.float32).copy()
+    goal = np.asarray(x_goal, dtype=np.float32).copy()
+    mid = 0.5 * (start + goal)
+    s_xy = start[:2].astype(np.float32)
+    g_xy = goal[:2].astype(np.float32)
+    c_xy = np.asarray(obstacle_center_xy, dtype=np.float32).reshape(2)
+    v = g_xy - s_xy
+    vn = float(np.linalg.norm(v))
+    if vn < 1e-8:
+        v = np.asarray([1.0, 0.0], dtype=np.float32)
+        vn = 1.0
+    v = (v / vn).astype(np.float32)
+    perp = np.asarray([-v[1], v[0]], dtype=np.float32)
+    clearance = float(obstacle_radius) + float(obstacle_margin) + 0.04 * max(float(obstacle_radius), 1.0)
+    base_mid_xy = 0.5 * (s_xy + g_xy)
+    offset_xy = c_xy + float(side_sign) * clearance * perp
+    # Bias the intermediate waypoint away from the obstacle while staying between start and goal.
+    mid[:2] = (0.35 * base_mid_xy + 0.65 * offset_xy).astype(np.float32)
+    return _build_piecewise_linear_path(
+        start.astype(np.float32),
+        mid.astype(np.float32),
+        goal.astype(np.float32),
+        n_waypoints=int(n_waypoints),
+        periodic=bool(periodic),
+    )
+
+
+def _line_intersects_circle_xy(
+    x_start: np.ndarray,
+    x_goal: np.ndarray,
+    *,
+    obstacle_center_xy: tuple[float, float],
+    obstacle_radius: float,
+    obstacle_margin: float,
+) -> bool:
+    s = np.asarray(x_start, dtype=np.float32).reshape(-1)[:2]
+    g = np.asarray(x_goal, dtype=np.float32).reshape(-1)[:2]
+    c = np.asarray(obstacle_center_xy, dtype=np.float32).reshape(2)
+    v = g - s
+    vv = float(np.dot(v, v))
+    if vv < 1e-12:
+        return float(np.linalg.norm(s - c)) <= float(obstacle_radius + obstacle_margin)
+    t = float(np.dot(c - s, v) / vv)
+    t = max(0.0, min(1.0, t))
+    foot = s + t * v
+    d = float(np.linalg.norm(foot - c))
+    return d <= float(obstacle_radius + obstacle_margin)
+
+
+def _path_xy_quality_score(
+    path: np.ndarray,
+    *,
+    obstacle_center_xy: tuple[float, float] | None = None,
+    obstacle_radius: float = 0.0,
+    obstacle_margin: float = 0.0,
+) -> float:
+    p = np.asarray(path, dtype=np.float32)
+    if p.ndim != 2 or p.shape[0] < 2 or p.shape[1] < 2:
+        return 1e9
+    xy = p[:, :2]
+    step = np.linalg.norm(np.diff(xy, axis=0), axis=1)
+    path_len = float(np.sum(step))
+    chord_vec = xy[-1] - xy[0]
+    chord = float(np.linalg.norm(chord_vec))
+    ratio = path_len / max(chord, 1e-8)
+    backtrack = 0.0
+    if chord > 1e-8:
+        direction = chord_vec / chord
+        progress = (xy - xy[0:1]) @ direction
+        dprog = np.diff(progress.reshape(-1))
+        backtrack = float(np.sum(np.maximum(-dprog, 0.0)))
+    loopiness = max(0.0, ratio - 1.15)
+    score = path_len + 1.8 * backtrack + 0.35 * chord * loopiness
+    if obstacle_center_xy is not None and float(obstacle_radius) > 0.0:
+        c_xy = np.asarray(obstacle_center_xy, dtype=np.float32).reshape(1, 2)
+        dist = np.linalg.norm(xy - c_xy, axis=1)
+        penetration = np.maximum(float(obstacle_radius) + float(obstacle_margin) - dist, 0.0)
+        score += 50.0 * float(np.sum(penetration ** 2))
+    return float(score)
+
+
+def _build_perturbed_linear_init_paths(
+    x_start: np.ndarray,
+    x_goal: np.ndarray,
+    *,
+    n_waypoints: int,
+    periodic: bool,
+    obstacle_center_xy: tuple[float, float] | None = None,
+    obstacle_radius: float = 0.0,
+    obstacle_margin: float = 0.0,
+) -> list[np.ndarray]:
+    start = np.asarray(x_start, dtype=np.float32).reshape(-1)
+    goal = np.asarray(x_goal, dtype=np.float32).reshape(-1)
+    out = [build_linear_path(start, goal, n_waypoints=int(n_waypoints), periodic=bool(periodic)).astype(np.float32)]
+    if start.shape[0] < 2:
+        return out
+    s_xy = start[:2].astype(np.float32)
+    g_xy = goal[:2].astype(np.float32)
+    chord = g_xy - s_xy
+    chord_n = float(np.linalg.norm(chord))
+    if chord_n < 1e-8:
+        return out
+    direction = chord / chord_n
+    normal = np.asarray([-direction[1], direction[0]], dtype=np.float32)
+    base_mid = 0.5 * (start + goal)
+    base_offset = max(0.06, 0.18 * chord_n)
+    if obstacle_center_xy is not None and float(obstacle_radius) > 0.0:
+        base_offset = max(base_offset, float(obstacle_radius) + float(obstacle_margin) + 0.03)
+    t = np.linspace(0.0, 1.0, int(max(3, n_waypoints)), dtype=np.float32).reshape(-1, 1)
+    envelope = np.sin(np.pi * t).astype(np.float32)
+    line = out[0].copy()
+    for sign in (-1.0, 1.0):
+        for amp_scale in (0.8, 1.25):
+            cand = line.copy()
+            cand[:, :2] = (cand[:, :2] + float(sign * amp_scale * base_offset) * envelope * normal.reshape(1, 2)).astype(np.float32)
+            cand[0] = start.astype(np.float32)
+            cand[-1] = goal.astype(np.float32)
+            out.append(cand.astype(np.float32))
+        mid = base_mid.copy()
+        mid[:2] = (base_mid[:2] + float(sign) * base_offset * normal).astype(np.float32)
+        out.append(
+            _build_piecewise_linear_path(
+                start.astype(np.float32),
+                mid.astype(np.float32),
+                goal.astype(np.float32),
+                n_waypoints=int(n_waypoints),
+                periodic=bool(periodic),
+            ).astype(np.float32)
+        )
+    return out
+
+
 def pick_far_pair_workspace_planar(
     x: np.ndarray,
     lengths: list[float],
@@ -370,6 +535,16 @@ def plan_path_optimized(
     obstacle_margin: float = 0.0,
     lam_obstacle: float = 0.0,
     obstacle_exclude_endpoints: bool = True,
+    ref_path_xy: np.ndarray | None = None,
+    lam_ref_xy: float = 0.0,
+    ref_path: np.ndarray | None = None,
+    lam_ref_path: float = 0.0,
+    lam_backtrack_xy: float = 0.0,
+    lam_detour_xy: float = 0.0,
+    detour_soft_cap_xy: float = 0.0,
+    bound_indices: list[int] | tuple[int, ...] | None = None,
+    bound_lo: float | None = None,
+    bound_hi: float | None = None,
 ) -> np.ndarray:
     if init_path is None:
         path0 = build_linear_path(
@@ -384,6 +559,15 @@ def plan_path_optimized(
     q = torch.tensor(path0, device=device, requires_grad=True)
     q0 = torch.tensor(x_start.astype(np.float32), device=device)
     qT = torch.tensor(x_goal.astype(np.float32), device=device)
+    bound_idx_t = None
+    bound_lo_f = None
+    bound_hi_f = None
+    if bound_indices is not None and bound_lo is not None and bound_hi is not None:
+        idx = [int(i) for i in bound_indices if 0 <= int(i) < int(q.shape[1])]
+        if idx:
+            bound_idx_t = torch.tensor(idx, device=device, dtype=torch.long)
+            bound_lo_f = float(bound_lo)
+            bound_hi_f = float(bound_hi)
 
     with torch.no_grad():
         v0 = _angle_delta_torch(
@@ -405,6 +589,16 @@ def plan_path_optimized(
             device=device,
             dtype=torch.float32,
         ).reshape(1, 2)
+    ref_xy_t = None
+    if ref_path_xy is not None and q.shape[1] >= 2 and float(lam_ref_xy) > 0.0:
+        ref_xy = np.asarray(ref_path_xy, dtype=np.float32)
+        if ref_xy.shape[0] == path0.shape[0] and ref_xy.shape[1] >= 2:
+            ref_xy_t = torch.tensor(ref_xy[:, :2], device=device, dtype=torch.float32)
+    ref_path_t = None
+    if ref_path is not None and float(lam_ref_path) > 0.0:
+        ref_full = np.asarray(ref_path, dtype=np.float32)
+        if ref_full.shape == path0.shape:
+            ref_path_t = torch.tensor(ref_full, device=device, dtype=torch.float32)
     for _ in range(int(opt_steps)):
         q_prev = q.detach().clone()
         opt.zero_grad(set_to_none=True)
@@ -430,11 +624,52 @@ def plan_path_optimized(
                 loss_obs = torch.tensor(0.0, device=q.device)
         else:
             loss_obs = torch.tensor(0.0, device=q.device)
+        if ref_xy_t is not None:
+            loss_ref = ((q[:, :2] - ref_xy_t) ** 2).mean()
+        else:
+            loss_ref = torch.tensor(0.0, device=q.device)
+        if ref_path_t is not None:
+            diff_ref = _angle_delta_torch(ref_path_t, q, periodic=bool(periodic))
+            loss_ref_path = (diff_ref ** 2).mean()
+        else:
+            loss_ref_path = torch.tensor(0.0, device=q.device)
+        if q.shape[1] >= 2 and float(lam_backtrack_xy) > 0.0:
+            chord = qT[:2] - q0[:2]
+            chord_n = torch.linalg.norm(chord)
+            if float(chord_n.detach().cpu().item()) > 1e-8:
+                direction = chord / chord_n
+                progress = torch.sum((q[:, :2] - q0[:2]) * direction.reshape(1, 2), dim=1)
+                dprog = progress[1:] - progress[:-1]
+                loss_backtrack = (torch.relu(-dprog) ** 2).mean()
+            else:
+                loss_backtrack = torch.tensor(0.0, device=q.device)
+        else:
+            loss_backtrack = torch.tensor(0.0, device=q.device)
+        if q.shape[1] >= 2 and float(lam_detour_xy) > 0.0:
+            chord = qT[:2] - q0[:2]
+            chord_n = torch.linalg.norm(chord)
+            if float(chord_n.detach().cpu().item()) > 1e-8:
+                direction = chord / chord_n
+                normal = torch.stack([-direction[1], direction[0]])
+                perp = torch.sum((q[:, :2] - q0[:2]) * normal.reshape(1, 2), dim=1)
+                if float(detour_soft_cap_xy) > 0.0:
+                    excess = torch.relu(torch.abs(perp) - float(detour_soft_cap_xy))
+                    loss_detour = (excess ** 2).mean()
+                else:
+                    loss_detour = (perp ** 2).mean()
+            else:
+                loss_detour = torch.tensor(0.0, device=q.device)
+        else:
+            loss_detour = torch.tensor(0.0, device=q.device)
         loss = (
             float(lam_manifold) * loss_man
             + float(lam_smooth) * loss_smooth
             + float(lam_len) * loss_len
             + float(obs_weight) * loss_obs
+            + float(max(0.0, lam_ref_xy)) * loss_ref
+            + float(max(0.0, lam_ref_path)) * loss_ref_path
+            + float(max(0.0, lam_backtrack_xy)) * loss_backtrack
+            + float(max(0.0, lam_detour_xy)) * loss_detour
         )
         loss.backward()
         opt.step()
@@ -445,6 +680,8 @@ def plan_path_optimized(
             q[:] = q_prev + dq * scale
             if periodic:
                 q[:] = _wrap_torch_pi(q)
+            if bound_idx_t is not None:
+                q[:, bound_idx_t] = torch.clamp(q[:, bound_idx_t], min=bound_lo_f, max=bound_hi_f)
             q[0] = q0
             q[-1] = qT
     out = q.detach().cpu().numpy().astype(np.float32)
@@ -496,6 +733,19 @@ def _planner_float(cfg: Any, key: str, default: float) -> float:
         except Exception:
             return float(default)
     return float(default)
+
+
+def _planner_int_list(cfg: Any, key: str) -> list[int] | None:
+    pln = getattr(cfg, "planner", None)
+    if not isinstance(pln, dict) or key not in pln:
+        return None
+    v = pln.get(key)
+    try:
+        if isinstance(v, (list, tuple)):
+            return [int(x) for x in v]
+        return [int(v)]
+    except Exception:
+        return None
 
 
 def _planner_bool(cfg: Any, key: str, default: bool) -> bool:
@@ -852,10 +1102,32 @@ def plan_path(
         obs_margin = _planner_float(cfg, "obstacle_margin", 0.0) if obs_enabled else 0.0
         obs_weight = _planner_float(cfg, "lam_obstacle", 0.0) if obs_enabled else 0.0
         obs_excl_ep = _planner_bool(cfg, "obstacle_exclude_endpoints", True)
-        return plan_path_optimized(
-            model,
-            x_start,
-            x_goal,
+        lam_ref_path = _planner_float(cfg, "lam_ref_path", 0.0)
+        bound_indices = _planner_int_list(cfg, "bound_indices")
+        bound_lo = _planner_float(cfg, "bound_lo", float("nan"))
+        bound_hi = _planner_float(cfg, "bound_hi", float("nan"))
+        if bound_indices is None or not np.isfinite(bound_lo) or not np.isfinite(bound_hi):
+            bound_indices = None
+            bound_lo = None
+            bound_hi = None
+        direct_path_blocked = False
+        if (
+            obs_enabled
+            and obs_center is not None
+            and float(obs_radius) > 0.0
+            and not bool(periodic)
+            and int(x_start.shape[0]) >= 2
+        ):
+            direct_path_blocked = _line_intersects_circle_xy(
+                x_start,
+                x_goal,
+                obstacle_center_xy=obs_center,
+                obstacle_radius=float(obs_radius),
+                obstacle_margin=float(obs_margin),
+            )
+        linear_ref_weight = 6.0 if not bool(direct_path_blocked) else 0.0
+        detour_soft_cap = float(max(0.0, float(obs_radius) + float(obs_margin) + 0.03)) if obs_enabled else 0.0
+        common_kwargs = dict(
             device=str(cfg.device),
             n_waypoints=int(n_waypoints),
             opt_steps=int(_cfg_val(cfg, ["planner.opt_steps"], 1240)),
@@ -865,12 +1137,78 @@ def plan_path(
             lam_smooth=float(_cfg_val(cfg, ["planner.opt_lam_smooth"], 0.2)),
             trust_scale=float(_cfg_val(cfg, ["planner.trust_scale"], 0.8)),
             periodic=bool(periodic),
-            init_path=init_path,
             obstacle_center_xy=obs_center,
             obstacle_radius=float(obs_radius),
             obstacle_margin=float(obs_margin),
             lam_obstacle=float(obs_weight),
             obstacle_exclude_endpoints=bool(obs_excl_ep),
+            lam_backtrack_xy=1.0 if bool(direct_path_blocked) else 0.6,
+            lam_detour_xy=1.4 if bool(direct_path_blocked) else 0.9,
+            detour_soft_cap_xy=detour_soft_cap,
+            lam_ref_path=float(lam_ref_path),
+            bound_indices=bound_indices,
+            bound_lo=bound_lo,
+            bound_hi=bound_hi,
+        )
+        if init_path is not None:
+            return plan_path_optimized(
+                model,
+                x_start,
+                x_goal,
+                init_path=init_path,
+                ref_path_xy=init_path.astype(np.float32),
+                ref_path=init_path.astype(np.float32),
+                **common_kwargs,
+            )
+        linear_init = build_linear_path(
+            x_start.astype(np.float32),
+            x_goal.astype(np.float32),
+            n_waypoints=int(n_waypoints),
+            periodic=bool(periodic),
+        )
+        if bool(direct_path_blocked):
+            candidates = _build_perturbed_linear_init_paths(
+                x_start.astype(np.float32),
+                x_goal.astype(np.float32),
+                n_waypoints=int(n_waypoints),
+                periodic=bool(periodic),
+                obstacle_center_xy=obs_center,
+                obstacle_radius=float(obs_radius),
+                obstacle_margin=float(obs_margin),
+            )
+            best_path = None
+            best_score = 1e18
+            for cand in candidates:
+                out = plan_path_optimized(
+                    model,
+                    x_start,
+                    x_goal,
+                    init_path=cand.astype(np.float32),
+                    ref_path_xy=cand.astype(np.float32),
+                    ref_path=cand.astype(np.float32),
+                    lam_ref_xy=0.45,
+                    **common_kwargs,
+                )
+                score = _path_xy_quality_score(
+                    out,
+                    obstacle_center_xy=obs_center,
+                    obstacle_radius=float(obs_radius),
+                    obstacle_margin=float(obs_margin),
+                )
+                if score < best_score:
+                    best_score = score
+                    best_path = out.astype(np.float32)
+            assert best_path is not None
+            return best_path
+        return plan_path_optimized(
+            model,
+            x_start,
+            x_goal,
+            init_path=linear_init.astype(np.float32),
+            ref_path_xy=linear_init.astype(np.float32) if not bool(direct_path_blocked) else None,
+            ref_path=linear_init.astype(np.float32),
+            lam_ref_xy=linear_ref_weight,
+            **common_kwargs,
         )
     raise ValueError(f"unknown planner_name '{planner_name}'")
 

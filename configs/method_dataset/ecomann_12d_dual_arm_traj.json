@@ -1,0 +1,11 @@
+{
+  "epochs": 80,
+  "lr": 0.0001,
+  "batch_size": 64,
+  "norm_level_clip_max": 3000.0,
+  "n_normal_space_traversal": 4,
+  "n_local_neighborhood_mult": 1.25,
+  "max_rand_comb_normal_dim": 3,
+  "aug_epsilon_mult_override": 0.45,
+  "is_augmenting_w_rand_comb_of_normaleigvecs": false
+}

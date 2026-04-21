@@ -1,0 +1,50 @@
+{
+  "planned_path_npz": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/test_12d_dual_arm_v2/oncl_plan/dual_arm_learned_plans.npz",
+  "planned_path_key": "path_2",
+  "orientation_mode": "task",
+  "sim_dt": 0.005555555555555556,
+  "n_task_waypoints": 80,
+  "n_control_steps": 1526,
+  "duration_s": 8.46945858001709,
+  "left_ik": {
+    "mean_pos_err": 0.020978664979338646,
+    "max_pos_err": 0.1324661523103714,
+    "first_pos_err": 3.1670510907133576e-06,
+    "mean_ori_err_deg": 7.220003128051758,
+    "max_ori_err_deg": 47.553585052490234
+  },
+  "right_ik": {
+    "mean_pos_err": 0.007754807826131582,
+    "max_pos_err": 0.11574023216962814,
+    "first_pos_err": 0.016209403052926064,
+    "mean_ori_err_deg": 0.6759830713272095,
+    "max_ori_err_deg": 8.055865287780762
+  },
+  "mean_joint_err_left": 0.0033083930611610413,
+  "mean_joint_err_right": 0.0042119440622627735,
+  "max_joint_err_left": 0.006039224565029144,
+  "max_joint_err_right": 0.007840873673558235,
+  "base_cfg": {
+    "dual_arm_left_base_xyz": [
+      -0.24,
+      -0.7,
+      0.0
+    ],
+    "dual_arm_left_base_rpy": [
+      0.0,
+      0.0,
+      1.5707963267948966
+    ],
+    "dual_arm_right_base_xyz": [
+      0.24,
+      0.7,
+      0.0
+    ],
+    "dual_arm_right_base_rpy": [
+      0.0,
+      0.0,
+      -1.5707963267948966
+    ]
+  },
+  "video_path": null
+}

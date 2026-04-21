@@ -14,12 +14,18 @@ from torch.utils.data import DataLoader
 
 def _add_smp_repo_to_path() -> str:
     here = os.path.abspath(os.path.dirname(__file__))
-    root = os.path.abspath(os.path.join(here, "..", ".."))
-    smp_root = os.path.join(root, "smp_manifold_learning-master")
-    if not os.path.isdir(smp_root):
+    repo_root = os.path.abspath(os.path.join(here, ".."))
+    legacy_root = os.path.abspath(os.path.join(here, "..", ".."))
+    candidates = [
+        os.path.join(legacy_root, "smp_manifold_learning-master"),
+        os.path.join(repo_root, "smp_manifold_learning-master"),
+    ]
+    smp_root = next((p for p in candidates if os.path.isdir(p)), None)
+    if smp_root is None:
         raise FileNotFoundError(
             "EcoMaNN repo not found at expected path: "
-            f"{smp_root}. Please place smp_manifold_learning-master there."
+            f"{candidates[0]} or {candidates[1]}. "
+            "Please place smp_manifold_learning-master there."
         )
     if smp_root not in sys.path:
         sys.path.insert(0, smp_root)
@@ -49,6 +55,8 @@ class Config:
     is_optimizing_signed_siamese_pairs: bool = True
     is_aligning_lpca_normal_space_eigvecs: bool = True
     is_augmenting_w_rand_comb_of_normaleigvecs: bool = True
+    max_rand_comb_normal_dim: int = 3
+    aug_epsilon_mult_override: float | None = None
     clean_aug_data: bool = True
     siam_mode: str = "all"
     n_normal_space_traversal: int = 9
@@ -131,6 +139,11 @@ def train_ecomann(
                 clean_aug_data=_as_bool(cfg.clean_aug_data),
                 is_aligning_lpca_normal_space_eigvecs=_as_bool(cfg.is_aligning_lpca_normal_space_eigvecs),
                 is_augmenting_w_rand_comb_of_normaleigvecs=_as_bool(cfg.is_augmenting_w_rand_comb_of_normaleigvecs),
+                max_rand_comb_normal_dim=int(cfg.max_rand_comb_normal_dim),
+                aug_epsilon_mult_override=(
+                    None if getattr(cfg, "aug_epsilon_mult_override", None) is None
+                    else float(cfg.aug_epsilon_mult_override)
+                ),
                 rand_seed=int(cfg.seed),
                 N_local_neighborhood_mult=float(cfg.n_local_neighborhood_mult),
                 dim_normal_space_override=(None if force_codim is None else int(force_codim)),

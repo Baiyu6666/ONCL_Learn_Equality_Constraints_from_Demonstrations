@@ -30,6 +30,7 @@ from models.kinematics import (
     workspace_embed_for_eval as shared_workspace_embed_for_eval,
     wrap_np_pi as _wrap_np_pi,
 )
+from models.feature_normalizer import FeatureNormalizer
 from models.projection import (
     project_points_with_steps_numpy,
     project_trajectory_numpy,
@@ -746,6 +747,37 @@ def train_baseline(
         "off_bank_preview_mask": off_bank_preview_mask,
     }
     return model, last_stats, history, artifacts
+
+
+def train_baseline_with_optional_normalization(
+    cfg: Config,
+    mode: str,
+    x: np.ndarray,
+    n_basis: np.ndarray | None = None,
+    *,
+    true_codim: int = 1,
+    dataset_name: str | None = None,
+    knn_k: int | None = None,
+) -> Tuple[nn.Module, Dict[str, float], Dict[str, List[float]], Dict[str, np.ndarray]]:
+    normalizer = FeatureNormalizer.fit(x, dataset_name=dataset_name, enable=True)
+    if not normalizer.enabled:
+        if n_basis is None:
+            k_eff = effective_knn_norm_estimation_points(cfg, len(x)) if knn_k is None else int(knn_k)
+            n_basis = knn_normal_bases(x, k_eff, int(true_codim), cfg)
+        model, stats, hist, artifacts = train_baseline(cfg, mode=mode, x=x, n_basis=n_basis)
+        artifacts["feature_normalizer"] = normalizer
+        artifacts["n_basis_plot"] = n_basis.astype(np.float32)
+        return model, stats, hist, artifacts
+
+    x_norm = normalizer.transform(x)
+    cfg_norm = Config(**{k: getattr(cfg, k) for k in Config.__dataclass_fields__.keys()})
+    k_eff = effective_knn_norm_estimation_points(cfg_norm, len(x_norm)) if knn_k is None else int(knn_k)
+    n_basis_norm = knn_normal_bases(x_norm, k_eff, int(true_codim), cfg_norm)
+    model, stats, hist, artifacts = train_baseline(cfg_norm, mode=mode, x=x_norm, n_basis=n_basis_norm)
+    artifacts["feature_normalizer"] = normalizer
+    artifacts["n_basis_plot"] = np.zeros((len(x), x.shape[1], int(true_codim)), dtype=np.float32)
+    artifacts["x_train_model_space"] = x_norm.astype(np.float32)
+    return model, stats, hist, artifacts
 
 
 def main() -> None:

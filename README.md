@@ -1,3 +1,31 @@
+python analyze/sim_sine_pose_obsavoid.py --init-mode nearest_demo  --seed 12266 --gui 2 --plot-n-paths 3  --ckpt outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_model.pt --keep-traces 1
+python analyze/sim_sine_pose_waypoints.py --gui 2  --seed 61526  --ckpt outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_model.pt
+
+python analyze/render_sine_pose_demonstrations.py   --n-demos 7   --draw-ref-trace 0   --draw-ee-trace 1   --trace-surface-clearance 0.018   --trace-stride 1   --demo-smooth-passes 1   --play-fps 50   --video-slowdown 1.0
+
+
+python analyze/plan_dual_arm_from_learned_constraint.py \
+  --ckpt outputs/bench/test_12d_dual_arm_v2/oncl/12d_dual_arm_traj_oncl_model.pt \
+  --outdir outputs/bench/test_12d_dual_arm_v2/oncl_plan \
+  --seed 112
+
+python analyze/sim_dual_arm_planned_path.py \
+  --plan-outdir outputs/bench/test_12d_dual_arm_v2/oncl_plan \
+  --gui 1 \
+  --save-snapshots 1 \
+  --snapshot-steps 100,300,500,750,1000 \
+  --snapshot-dir outputs/bench/test_12d_dual_arm_v2/oncl_plan/paper_snaps \
+  --planned-path-key path_0
+
+
+python runners/run_benchmark.py \
+  --methods oncl \
+  --datasets 12d_dual_arm_traj \
+  --seeds 0,1,2,3,4,5,6 \
+  --outdir outputs/bench/paper_mix_2d_3d6d_traj_vs_nontraj_7seed\
+  --rewrite
+
+
 # LearnEqConstraints
 
 Learning Equality Constraints from Demonstrations.
@@ -85,3 +113,5 @@ Metric definitions and the mapping between paper-facing names and legacy/interna
 Dataset ids in code are the internal ids used by configs and outputs. The mapping to paper environment names is documented in [datasets/README.md](/home/baiyu/PycharmProjects/equality_manofld/datasets/README.md).
 
 For the paper-facing environments, the default benchmark setting uses the trajectory-enabled versions when both `traj` and non-`traj` variants exist.
+
+

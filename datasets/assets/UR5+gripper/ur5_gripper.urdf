@@ -91,8 +91,7 @@
     <child link="upper_arm_link"/>
     <origin rpy="0.0 1.570796325 0.0" xyz="0.0 0.13585 0.0"/>
     <axis xyz="0 1 0"/>
-    <limit effort="150.0" lower="-3.14159265" upper="-0.9" velocity="3.15"/>
-    <!-- <limit effort="150.0" lower="-3.14159265" upper="-0.8" velocity="3.15"/> -->
+    <limit effort="150.0" lower="-3.14159265" upper="3.14159265" velocity="3.15"/>
     <dynamics damping="0.0" friction="0.0"/>
   </joint>
   <link name="upper_arm_link">
@@ -313,12 +312,62 @@
     <parent link="wrist_3_link"/>
     <child link="tool0"/>
   </joint>
+  <!-- Short probe-like task tool seated inside the gripper closing region. -->
+  <link name="task_tool_link">
+    <visual>
+      <origin rpy="0 1.570796325 0" xyz="-0.045 0 0"/>
+      <geometry>
+        <cylinder radius="0.0042" length="0.09"/>
+      </geometry>
+      <material name="TaskToolOrange">
+        <color rgba="0.92 0.50 0.10 1.0"/>
+      </material>
+    </visual>
+    <visual>
+      <origin rpy="0 1.570796325 0" xyz="0.0175 0 0"/>
+      <geometry>
+        <cylinder radius="0.0055" length="0.035"/>
+      </geometry>
+      <material name="TaskToolOrange">
+        <color rgba="0.95 0.55 0.12 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 1.570796325 0" xyz="-0.0435 0 0"/>
+      <geometry>
+        <cylinder radius="0.0036" length="0.087"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 1.570796325 0" xyz="0.016 0 0"/>
+      <geometry>
+        <cylinder radius="0.0045" length="0.032"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.008"/>
+      <origin rpy="0 0 0" xyz="-0.002 0 0"/>
+      <inertia ixx="0.000012" ixy="0.0" ixz="0.0" iyy="0.000012" iyz="0.0" izz="0.0000020"/>
+    </inertial>
+  </link>
+  <link name="task_tcp"/>
+  <joint name="gripperpalm-task_tool_fixed_joint" type="fixed">
+    <!-- Child x-axis points along gripperpalm +y so task_tcp x is the probe axis. -->
+    <origin rpy="0 0 1.570796325" xyz="0 0.055 0"/>
+    <parent link="gripperpalm"/>
+    <child link="task_tool_link"/>
+  </joint>
+  <joint name="task_tool-task_tcp_fixed_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0.035 0 0"/>
+    <parent link="task_tool_link"/>
+    <child link="task_tcp"/>
+  </joint>
   <link name="world"/>
   <!-- box -->
   <link name="box_link">
     <visual>
       <geometry>
-        <box size=".6 .4 0.87"/>
+        <box size=".42 .28 0.87"/>
       </geometry>
     </visual>
   </link>
@@ -2102,4 +2151,3 @@
   </gazebo>
   <!-- end of joint list -->
 </robot>
-

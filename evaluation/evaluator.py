@@ -8,7 +8,12 @@ import xml.etree.ElementTree as ET
 import numpy as np
 import torch
 from torch import nn
-from datasets.constraint_datasets import generate_dataset, lift_xy_to_3d_var, lift_xy_to_3d_zero
+from datasets.constraint_datasets import (
+    generate_dataset,
+    lift_xy_to_3d_var,
+    lift_xy_to_3d_zero,
+    sine_surface_z_and_normal_from_xy,
+)
 
 DEFAULT_EVAL_CFG: dict[str, Any] = {
     "device": "cpu",
@@ -130,11 +135,9 @@ def resolve_eval_cfg(
     method_key: str | None = None,
     dataset_name: str | None = None,
 ) -> Any:
-    vals = dict(DEFAULT_EVAL_CFG)
-    # Method configs should not carry evaluator hyperparameters.
-    # Keep runtime/device and required passthrough fields.
-    if hasattr(base_cfg, "device"):
-        vals["device"] = getattr(base_cfg, "device")
+    vals: dict[str, Any] = dict(DEFAULT_EVAL_CFG)
+    if hasattr(base_cfg, "__dict__"):
+        vals.update(vars(base_cfg))
     if method_key:
         vals.update(EVAL_METHOD_OVERRIDES.get(method_key, {}))
     if dataset_name:
@@ -142,29 +145,91 @@ def resolve_eval_cfg(
     return SimpleNamespace(**vals)
 
 
-def eval_bounds_from_train(x_train: np.ndarray, cfg: Any) -> tuple[np.ndarray, np.ndarray]:
+def _wrap_pi_np(x: np.ndarray) -> np.ndarray:
+    return ((np.asarray(x, dtype=np.float32) + np.pi) % (2.0 * np.pi) - np.pi).astype(np.float32)
+
+
+def _mixed_unit_pose_angle_dims(dataset_name: str | None, dim: int) -> tuple[int, ...]:
+    name = str(dataset_name or "")
+    if name in ("6d_workspace_sine_surface_pose", "6d_workspace_sine_surface_pose_traj") and dim >= 6:
+        return (3, 4, 5)
+    if name in ("12d_dual_arm", "12d_dual_arm_traj") and dim >= 12:
+        return (3, 4, 5, 9, 10, 11)
+    return ()
+
+
+def _circular_center_half_width(angles: np.ndarray, pad_ratio: float) -> tuple[float, float]:
+    a = _wrap_pi_np(np.asarray(angles, dtype=np.float32).reshape(-1))
+    if len(a) == 0:
+        return 0.0, float(np.pi)
+    theta = np.sort((a + np.pi) % (2.0 * np.pi)).astype(np.float64)
+    if len(theta) == 1:
+        return float(a[0]), 1e-6
+    gaps = np.diff(np.concatenate([theta, theta[:1] + 2.0 * np.pi]))
+    gap_idx = int(np.argmax(gaps))
+    largest_gap = float(gaps[gap_idx])
+    arc_width = float(max(0.0, 2.0 * np.pi - largest_gap))
+    arc_start = float(theta[(gap_idx + 1) % len(theta)])
+    center_theta = arc_start + 0.5 * arc_width
+    center = float(_wrap_pi_np(np.asarray([center_theta - np.pi], dtype=np.float32))[0])
+    half = float(min(np.pi, max(1e-6, 0.5 * arc_width * max(1.0 + float(pad_ratio), 1e-6))))
+    return center, half
+
+
+def eval_bounds_from_train(
+    x_train: np.ndarray,
+    cfg: Any,
+    dataset_name: str | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
     mins = x_train.min(axis=0)
     maxs = x_train.max(axis=0)
+    angle_dims = _mixed_unit_pose_angle_dims(dataset_name, int(x_train.shape[1]))
+    pad_ratio = float(getattr(cfg, "eval_pad_ratio", DEFAULT_EVAL_CFG["eval_pad_ratio"]))
+    if angle_dims:
+        center = 0.5 * (mins + maxs)
+        span = np.maximum(maxs - mins, 1e-6)
+        half = 0.5 * span * max(1.0 + pad_ratio, 1e-6)
+        for d in angle_dims:
+            c_d, h_d = _circular_center_half_width(x_train[:, int(d)], pad_ratio)
+            center[int(d)] = c_d
+            half[int(d)] = h_d
+        return (center - half).astype(np.float32), (center + half).astype(np.float32)
+
     span_raw = maxs - mins
     min_axis_ratio = float(getattr(cfg, "eval_min_axis_span_ratio", DEFAULT_EVAL_CFG["eval_min_axis_span_ratio"]))
     ref_span = max(float(np.max(span_raw)), 1e-6)
     min_axis_span = max(0.0, min_axis_ratio) * ref_span
     span = np.maximum(span_raw, min_axis_span)
-    pad_ratio = float(getattr(cfg, "eval_pad_ratio", DEFAULT_EVAL_CFG["eval_pad_ratio"]))
     scale = max(1.0 + pad_ratio, 1e-6)
     center = 0.5 * (mins + maxs)
     half = 0.5 * span * scale
     return center - half, center + half
 
 
-def _clip_points_to_eval_bounds(x: np.ndarray, x_train: np.ndarray, cfg: Any) -> np.ndarray:
+def _clip_points_to_eval_bounds(
+    x: np.ndarray,
+    x_train: np.ndarray,
+    cfg: Any,
+    dataset_name: str | None = None,
+) -> np.ndarray:
     """Evaluation-only safety clip to the padded train-domain bounds."""
-    mins, maxs = eval_bounds_from_train(x_train, cfg)
-    return np.clip(
-        x.astype(np.float32),
-        mins.reshape(1, -1).astype(np.float32),
-        maxs.reshape(1, -1).astype(np.float32),
-    ).astype(np.float32)
+    mins, maxs = eval_bounds_from_train(x_train, cfg, dataset_name=dataset_name)
+    center = (0.5 * (mins + maxs)).astype(np.float32)
+    out = x.astype(np.float32).copy()
+    finite_rows = np.isfinite(out).all(axis=1)
+    if not np.all(finite_rows):
+        out[~finite_rows] = center
+    angle_dims = _mixed_unit_pose_angle_dims(dataset_name, int(out.shape[1]))
+    non_angle_dims = [i for i in range(out.shape[1]) if i not in set(angle_dims)]
+    if non_angle_dims:
+        out[:, non_angle_dims] = np.clip(
+            out[:, non_angle_dims],
+            mins.reshape(1, -1)[:, non_angle_dims].astype(np.float32),
+            maxs.reshape(1, -1)[:, non_angle_dims].astype(np.float32),
+        ).astype(np.float32)
+    if angle_dims:
+        out[:, list(angle_dims)] = _wrap_pi_np(out[:, list(angle_dims)])
+    return out
 
 
 def sample_eval_seed_points(
@@ -174,7 +239,8 @@ def sample_eval_seed_points(
 ) -> np.ndarray:
     rng = _fixed_rng()
     n_seed = max(64, int(getattr(cfg, "eval_proj_n_points", DEFAULT_EVAL_CFG["eval_proj_n_points"])))
-    mins, maxs = eval_bounds_from_train(x_train, cfg)
+    mins, maxs = eval_bounds_from_train(x_train, cfg, dataset_name=dataset_name)
+    angle_dims = _mixed_unit_pose_angle_dims(dataset_name, int(x_train.shape[1]))
     if str(dataset_name or "").startswith("6d_spatial_arm_up_n6"):
         lim = _ur5_joint_limits_from_urdf()
         if lim is not None:
@@ -182,6 +248,7 @@ def sample_eval_seed_points(
             if int(x_train.shape[1]) >= 6:
                 mins = lo.astype(np.float32)
                 maxs = hi.astype(np.float32)
+                angle_dims = ()
     span = np.maximum(maxs - mins, 1e-6).astype(np.float32)
     near_ratio = float(np.clip(cfg.eval_chamfer_near_ratio, 0.0, 1.0))
     n_near = int(round(n_seed * near_ratio))
@@ -194,12 +261,26 @@ def sample_eval_seed_points(
         x0_near = x0_near + rng.normal(size=x0_near.shape).astype(np.float32) * (
             noise_std * span.reshape(1, -1)
         )
-        x0_near = np.clip(x0_near, mins.reshape(1, -1), maxs.reshape(1, -1))
+        non_angle_dims = [i for i in range(x0_near.shape[1]) if i not in set(angle_dims)]
+        if non_angle_dims:
+            x0_near[:, non_angle_dims] = np.clip(
+                x0_near[:, non_angle_dims],
+                mins.reshape(1, -1)[:, non_angle_dims],
+                maxs.reshape(1, -1)[:, non_angle_dims],
+            )
+        if angle_dims:
+            x0_near[:, list(angle_dims)] = _wrap_pi_np(x0_near[:, list(angle_dims)])
         out.append(x0_near.astype(np.float32))
     if n_box > 0:
-        out.append(rng.uniform(mins, maxs, size=(n_box, len(mins))).astype(np.float32))
+        x0_box = rng.uniform(mins, maxs, size=(n_box, len(mins))).astype(np.float32)
+        if angle_dims:
+            x0_box[:, list(angle_dims)] = _wrap_pi_np(x0_box[:, list(angle_dims)])
+        out.append(x0_box.astype(np.float32))
     if not out:
-        return rng.uniform(mins, maxs, size=(n_seed, len(mins))).astype(np.float32)
+        x0 = rng.uniform(mins, maxs, size=(n_seed, len(mins))).astype(np.float32)
+        if angle_dims:
+            x0[:, list(angle_dims)] = _wrap_pi_np(x0[:, list(angle_dims)])
+        return x0.astype(np.float32)
     return np.concatenate(out, axis=0).astype(np.float32)
 
 
@@ -295,22 +376,10 @@ def _true_projection(x: np.ndarray, grid: np.ndarray) -> tuple[np.ndarray, np.nd
         return gg[idx], d
 
 
-def _workspace_surface_z_and_normal_from_xy(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    # Keep consistent with datasets.constraint_datasets._workspace_sine_surface_pose_n6
-    a1, a2 = 0.55, 0.35
-    fx, fy = 1.2, 1.0
-    z = (a1 * np.sin(fx * x) + a2 * np.cos(fy * y)).astype(np.float32)
-    dzdx = (a1 * fx * np.cos(fx * x)).astype(np.float32)
-    dzdy = (-a2 * fy * np.sin(fy * y)).astype(np.float32)
-    n = np.stack([-dzdx, -dzdy, np.ones_like(dzdx)], axis=1).astype(np.float32)
-    n /= (np.linalg.norm(n, axis=1, keepdims=True) + 1e-12)
-    return z, n
-
-
-def _workspace_pose_analytic_target_embed(embed_xyz_zaxis: np.ndarray) -> np.ndarray:
+def _workspace_pose_analytic_target_embed(embed_xyz_zaxis: np.ndarray, cfg: Any | None = None) -> np.ndarray:
     x = embed_xyz_zaxis[:, 0].astype(np.float32)
     y = embed_xyz_zaxis[:, 1].astype(np.float32)
-    z_true, n_true = _workspace_surface_z_and_normal_from_xy(x, y)
+    z_true, n_true = sine_surface_z_and_normal_from_xy(x, y, cfg=cfg)
     tgt = np.concatenate(
         [x[:, None], y[:, None], z_true[:, None], n_true.astype(np.float32)],
         axis=1,
@@ -318,8 +387,8 @@ def _workspace_pose_analytic_target_embed(embed_xyz_zaxis: np.ndarray) -> np.nda
     return tgt
 
 
-def _workspace_pose_analytic_dist_embed(embed_xyz_zaxis: np.ndarray) -> np.ndarray:
-    tgt = _workspace_pose_analytic_target_embed(embed_xyz_zaxis)
+def _workspace_pose_analytic_dist_embed(embed_xyz_zaxis: np.ndarray, cfg: Any | None = None) -> np.ndarray:
+    tgt = _workspace_pose_analytic_target_embed(embed_xyz_zaxis, cfg=cfg)
     d = np.linalg.norm(
         embed_xyz_zaxis.astype(np.float32) - tgt.astype(np.float32),
         axis=1,
@@ -328,14 +397,31 @@ def _workspace_pose_analytic_dist_embed(embed_xyz_zaxis: np.ndarray) -> np.ndarr
 
 
 def _dual_arm_pose_params(cfg: Any) -> dict[str, float]:
+    required = (
+        "dual_arm_grasp_span",
+        "dual_arm_curve_x_span",
+        "dual_arm_curve_y_amp",
+        "dual_arm_curve_y_freq",
+        "dual_arm_curve_z_base",
+        "dual_arm_vertical_half_range",
+    )
+    missing = [k for k in required if not hasattr(cfg, k)]
+    if missing:
+        raise ValueError(
+            "12D dual-arm analytic evaluation requires task config fields "
+            f"{list(required)}, but missing {missing}. "
+            "This usually means env/task parameters were not propagated into eval cfg."
+        )
+    z_half = float(getattr(cfg, "dual_arm_vertical_half_range"))
     return {
-        "grasp_span": float(getattr(cfg, "dual_arm_grasp_span", 1.0)),
-        "x_span": float(getattr(cfg, "dual_arm_curve_x_span", 1.4)),
-        "y_amp": float(getattr(cfg, "dual_arm_curve_y_amp", 0.55)),
-        "y_freq": float(getattr(cfg, "dual_arm_curve_y_freq", 1.0)),
-        "z_base": float(getattr(cfg, "dual_arm_curve_z_base", 0.2)),
-        "z_amp": float(getattr(cfg, "dual_arm_curve_z_amp", 0.35)),
+        "grasp_span": float(getattr(cfg, "dual_arm_grasp_span")),
+        "x_span": float(getattr(cfg, "dual_arm_curve_x_span")),
+        "y_amp": float(getattr(cfg, "dual_arm_curve_y_amp")),
+        "y_freq": float(getattr(cfg, "dual_arm_curve_y_freq")),
+        "z_base": float(getattr(cfg, "dual_arm_curve_z_base")),
+        "z_amp": float(getattr(cfg, "dual_arm_curve_z_amp", z_half)),
         "z_freq": float(getattr(cfg, "dual_arm_curve_z_freq", 0.7)),
+        "z_half_range": z_half,
     }
 
 
@@ -367,27 +453,21 @@ def _dual_arm_curve_center_tnb_from_s(s: np.ndarray, cfg: Any) -> tuple[np.ndarr
     ss = s.astype(np.float32)
     x = (p["x_span"] * ss).astype(np.float32)
     y = (p["y_amp"] * np.sin(p["y_freq"] * np.pi * ss)).astype(np.float32)
-    z = (p["z_base"] + p["z_amp"] * np.cos(p["z_freq"] * np.pi * ss)).astype(np.float32)
+    z = np.full_like(ss, p["z_base"], dtype=np.float32)
     dx = np.full_like(ss, p["x_span"], dtype=np.float32)
     dy = (p["y_amp"] * p["y_freq"] * np.pi * np.cos(p["y_freq"] * np.pi * ss)).astype(np.float32)
-    dz = (-p["z_amp"] * p["z_freq"] * np.pi * np.sin(p["z_freq"] * np.pi * ss)).astype(np.float32)
+    dz = np.zeros_like(ss, dtype=np.float32)
 
     center = np.stack([x, y, z], axis=1).astype(np.float32)
     tang = np.stack([dx, dy, dz], axis=1).astype(np.float32)
     tang /= (np.linalg.norm(tang, axis=1, keepdims=True) + 1e-12)
 
-    ref_up = np.tile(np.array([0.0, 0.0, 1.0], dtype=np.float32), (len(ss), 1))
-    alt_up = np.tile(np.array([0.0, 1.0, 0.0], dtype=np.float32), (len(ss), 1))
-    use_alt = np.abs(np.sum(tang * ref_up, axis=1)) > 0.95
-    ref = ref_up.copy()
-    ref[use_alt] = alt_up[use_alt]
-    normal = ref - np.sum(ref * tang, axis=1, keepdims=True) * tang
-    normal /= (np.linalg.norm(normal, axis=1, keepdims=True) + 1e-12)
-    binormal = np.cross(tang, normal).astype(np.float32)
-    binormal /= (np.linalg.norm(binormal, axis=1, keepdims=True) + 1e-12)
-    normal = np.cross(binormal, tang).astype(np.float32)
-    normal /= (np.linalg.norm(normal, axis=1, keepdims=True) + 1e-12)
-    return center.astype(np.float32), tang.astype(np.float32), normal.astype(np.float32), binormal.astype(np.float32)
+    z_axis = np.tile(np.array([0.0, 0.0, 1.0], dtype=np.float32), (len(ss), 1))
+    y_axis = np.cross(z_axis, tang).astype(np.float32)
+    y_axis /= (np.linalg.norm(y_axis, axis=1, keepdims=True) + 1e-12)
+    z_axis = np.cross(tang, y_axis).astype(np.float32)
+    z_axis /= (np.linalg.norm(z_axis, axis=1, keepdims=True) + 1e-12)
+    return center.astype(np.float32), tang.astype(np.float32), y_axis.astype(np.float32), z_axis.astype(np.float32)
 
 
 def _dual_arm_pose_embed_raw(x_raw: np.ndarray) -> np.ndarray:
@@ -401,6 +481,22 @@ def _dual_arm_pose_embed_raw(x_raw: np.ndarray) -> np.ndarray:
     return np.concatenate([_pose_embed(x[:, :6]), _pose_embed(x[:, 6:12])], axis=1).astype(np.float32)
 
 
+def _dual_arm_pose_task_embed_raw(x_raw: np.ndarray) -> np.ndarray:
+    x = x_raw.astype(np.float32)
+
+    def _pose_embed(p: np.ndarray) -> np.ndarray:
+        pos = p[:, :3].astype(np.float32)
+        R = _rpy_zyx_to_rotmat_batch(p[:, 3:6].astype(np.float32))
+        # Similar to 6D sine pose's [position, task axis] distance, but include
+        # the full task frame so tangent alignment and same orientation are both visible.
+        return np.concatenate(
+            [pos, R[:, :, 0], R[:, :, 1], R[:, :, 2]],
+            axis=1,
+        ).astype(np.float32)
+
+    return np.concatenate([_pose_embed(x[:, :6]), _pose_embed(x[:, 6:12])], axis=1).astype(np.float32)
+
+
 def _dual_arm_pose_analytic_target_raw(x_raw: np.ndarray, cfg: Any) -> np.ndarray:
     x = x_raw.astype(np.float32)
     p = _dual_arm_pose_params(cfg)
@@ -408,26 +504,13 @@ def _dual_arm_pose_analytic_target_raw(x_raw: np.ndarray, cfg: Any) -> np.ndarra
     center_obs = (0.5 * (x[:, 0:3] + x[:, 6:9])).astype(np.float32)
     s_grid = np.linspace(-1.0, 1.0, 2048, dtype=np.float32)
     center_grid, _, _, _ = _dual_arm_curve_center_tnb_from_s(s_grid, cfg)
-    d2 = np.sum((center_obs[:, None, :] - center_grid[None, :, :]) ** 2, axis=2)
+    d2 = np.sum((center_obs[:, None, 0:2] - center_grid[None, :, 0:2]) ** 2, axis=2)
     idx = np.argmin(d2, axis=1)
     s_star = s_grid[idx].astype(np.float32)
 
-    center, tang, normal, binormal = _dual_arm_curve_center_tnb_from_s(s_star, cfg)
-    R_obs_1 = _rpy_zyx_to_rotmat_batch(x[:, 3:6].astype(np.float32))
-    R_obs_2 = _rpy_zyx_to_rotmat_batch(x[:, 9:12].astype(np.float32))
-    y_obs = (R_obs_1[:, :, 1] + R_obs_2[:, :, 1]).astype(np.float32)
-    y_obs /= (np.linalg.norm(y_obs, axis=1, keepdims=True) + 1e-12)
-    phi = np.arctan2(np.sum(y_obs * binormal, axis=1), np.sum(y_obs * normal, axis=1)).astype(np.float32)
-
-    c = np.cos(phi)[:, None].astype(np.float32)
-    s = np.sin(phi)[:, None].astype(np.float32)
-    y_axis = c * normal + s * binormal
-    z_axis = -s * normal + c * binormal
-    y_axis /= (np.linalg.norm(y_axis, axis=1, keepdims=True) + 1e-12)
-    z_axis = np.cross(tang, y_axis).astype(np.float32)
-    z_axis /= (np.linalg.norm(z_axis, axis=1, keepdims=True) + 1e-12)
-    y_axis = np.cross(z_axis, tang).astype(np.float32)
-    y_axis /= (np.linalg.norm(y_axis, axis=1, keepdims=True) + 1e-12)
+    center, tang, y_axis, z_axis = _dual_arm_curve_center_tnb_from_s(s_star, cfg)
+    u_star = np.clip(center_obs[:, 2] - p["z_base"], -p["z_half_range"], p["z_half_range"])
+    center[:, 2] = p["z_base"] + u_star.astype(np.float32)
 
     R_tgt = np.stack([tang, y_axis, z_axis], axis=2).astype(np.float32)
     sy = -np.clip(R_tgt[:, 2, 0], -1.0, 1.0)
@@ -456,9 +539,41 @@ def _dual_arm_pose_analytic_target_embed(x_raw: np.ndarray, cfg: Any) -> np.ndar
 
 
 def _dual_arm_pose_analytic_dist_embed(x_raw: np.ndarray, cfg: Any) -> np.ndarray:
-    src = _dual_arm_pose_embed_raw(x_raw)
-    tgt = _dual_arm_pose_analytic_target_embed(x_raw, cfg)
+    src = _dual_arm_pose_task_embed_raw(x_raw)
+    tgt = _dual_arm_pose_task_embed_raw(_dual_arm_pose_analytic_target_raw(x_raw, cfg))
     return np.linalg.norm(src - tgt, axis=1).astype(np.float32)
+
+
+def _rotation_geodesic_deg_rpy(rpy_a: np.ndarray, rpy_b: np.ndarray) -> np.ndarray:
+    ra = _rpy_zyx_to_rotmat_batch(np.asarray(rpy_a, dtype=np.float32))
+    rb = _rpy_zyx_to_rotmat_batch(np.asarray(rpy_b, dtype=np.float32))
+    r_rel = np.einsum("nij,njk->nik", np.transpose(ra, (0, 2, 1)), rb)
+    tr = r_rel[:, 0, 0] + r_rel[:, 1, 1] + r_rel[:, 2, 2]
+    return np.degrees(np.arccos(np.clip((tr - 1.0) * 0.5, -1.0, 1.0))).astype(np.float32)
+
+
+def dual_arm_pose_true_constraint_error_arrays(x_raw: np.ndarray, cfg: Any) -> dict[str, np.ndarray]:
+    x = np.asarray(x_raw, dtype=np.float32)
+    target = _dual_arm_pose_analytic_target_raw(x[:, :12], cfg)
+    left_pos = np.linalg.norm(x[:, 0:3] - target[:, 0:3], axis=1).astype(np.float32)
+    right_pos = np.linalg.norm(x[:, 6:9] - target[:, 6:9], axis=1).astype(np.float32)
+    left_ori = _rotation_geodesic_deg_rpy(x[:, 3:6], target[:, 3:6]).astype(np.float32)
+    right_ori = _rotation_geodesic_deg_rpy(x[:, 9:12], target[:, 9:12]).astype(np.float32)
+    center = (0.5 * (x[:, 0:3] + x[:, 6:9])).astype(np.float32)
+    center_t = (0.5 * (target[:, 0:3] + target[:, 6:9])).astype(np.float32)
+    p = _dual_arm_pose_params(cfg)
+    span = np.linalg.norm(x[:, 6:9] - x[:, 0:3], axis=1).astype(np.float32)
+    return {
+        "left_pos_err": left_pos,
+        "right_pos_err": right_pos,
+        "mean_pos_err": (0.5 * (left_pos + right_pos)).astype(np.float32),
+        "left_ori_err_deg": left_ori,
+        "right_ori_err_deg": right_ori,
+        "mean_ori_err_deg": (0.5 * (left_ori + right_ori)).astype(np.float32),
+        "analytic_vector_dist": _dual_arm_pose_analytic_dist_embed(x[:, :12], cfg).astype(np.float32),
+        "center_err": np.linalg.norm(center - center_t, axis=1).astype(np.float32),
+        "span_err": np.abs(span - float(p["grasp_span"])).astype(np.float32),
+    }
 
 
 def evaluate_bidirectional_chamfer(
@@ -492,6 +607,7 @@ def evaluate_bidirectional_chamfer(
             learned_samples_override.astype(np.float32),
             x_train,
             cfg,
+            dataset_name=dataset_name,
         )
     else:
         x0 = (
@@ -506,6 +622,7 @@ def evaluate_bidirectional_chamfer(
             learned_samples.astype(np.float32),
             x_train,
             cfg,
+            dataset_name=dataset_name,
         )
         learned_samples = learned_samples.astype(np.float32)
         if postprocess_fn is not None:
@@ -581,7 +698,8 @@ def evaluate_projection_metrics(
             and x_eval_metric.shape[1] >= 6
         ):
             d_true_eval = _workspace_pose_analytic_dist_embed(
-                x_eval_metric[:, :6].astype(np.float32)
+                x_eval_metric[:, :6].astype(np.float32),
+                cfg,
             )
             dist_space = "workspace_analytic"
         elif use_dual_arm_workspace_analytic and x_eval.ndim == 2 and x_eval.shape[1] >= 12:
@@ -604,6 +722,7 @@ def evaluate_projection_metrics(
         proj.astype(np.float32),
         x_train,
         cfg,
+        dataset_name=dataset_name,
     )
     if postprocess_fn is not None:
         proj = postprocess_fn(proj).astype(np.float32)
@@ -618,7 +737,8 @@ def evaluate_projection_metrics(
             and x_eval_metric.shape[1] >= 6
         ):
             proj_true = _workspace_pose_analytic_target_embed(
-                x_eval_metric[:, :6].astype(np.float32)
+                x_eval_metric[:, :6].astype(np.float32),
+                cfg,
             )
         elif use_dual_arm_workspace_analytic and x_eval.ndim == 2 and x_eval.shape[1] >= 12:
             proj_true = _dual_arm_pose_analytic_target_embed(
@@ -640,7 +760,8 @@ def evaluate_projection_metrics(
             and proj_metric_all.shape[1] >= 6
         ):
             proj_final_true_dist = _workspace_pose_analytic_dist_embed(
-                proj_metric_all[proj_mask, :6].astype(np.float32)
+                proj_metric_all[proj_mask, :6].astype(np.float32),
+                cfg,
             )
         elif use_dual_arm_workspace_analytic and proj.ndim == 2 and proj.shape[1] >= 12:
             proj_final_true_dist = _dual_arm_pose_analytic_dist_embed(

@@ -6,8 +6,11 @@ import glob
 import json
 import os
 import shutil
+import sys
 
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
 # Keep local W&B files under repo-root/wandb regardless of launch cwd.
 os.environ["WANDB_DIR"] = os.path.join(_PROJECT_ROOT, "wandb")
 

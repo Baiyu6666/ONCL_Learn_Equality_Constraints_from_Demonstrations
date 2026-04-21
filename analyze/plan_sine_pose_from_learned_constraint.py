@@ -25,8 +25,14 @@ if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
 from experiments.dataset_resolve import resolve_dataset
-from models.mlp import MLP
-from models.planner import plan_path
+from datasets.constraint_datasets import (
+    sine_surface_affine_params,
+    sine_surface_apply_affine_scalar,
+    sine_surface_apply_affine_xy,
+    sine_surface_z_and_normal_from_xy,
+)
+from models.mlp import MLP, NormalizedMLP
+from models.planner import build_linear_path, plan_path
 from models.projection import project_points_with_steps_numpy
 
 
@@ -86,19 +92,12 @@ def _rpy_zyx_to_local_z(roll: np.ndarray, pitch: np.ndarray, yaw: np.ndarray) ->
     return z
 
 
-def _workspace_surface_z_and_normal_from_xy(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    a1, a2 = 0.55, 0.35
-    fx, fy = 1.2, 1.0
-    z = (a1 * np.sin(fx * x) + a2 * np.cos(fy * y)).astype(np.float32)
-    dzdx = a1 * fx * np.cos(fx * x)
-    dzdy = -a2 * fy * np.sin(fy * y)
-    n = np.stack([-dzdx, -dzdy, np.ones_like(dzdx)], axis=1).astype(np.float32)
-    n /= (np.linalg.norm(n, axis=1, keepdims=True) + 1e-12)
-    return z, n
+def _workspace_surface_z_and_normal_from_xy(x: np.ndarray, y: np.ndarray, surface_cfg: Any | None = None) -> tuple[np.ndarray, np.ndarray]:
+    return sine_surface_z_and_normal_from_xy(x, y, surface_cfg)
 
 
-def _error_to_true_constraint(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    z_true, n_true = _workspace_surface_z_and_normal_from_xy(x[:, 0], x[:, 1])
+def _error_to_true_constraint(x: np.ndarray, surface_cfg: Any | None = None) -> tuple[np.ndarray, np.ndarray]:
+    z_true, n_true = _workspace_surface_z_and_normal_from_xy(x[:, 0], x[:, 1], surface_cfg)
     pos_err = np.abs(x[:, 2] - z_true)
     z_axis = _rpy_zyx_to_local_z(x[:, 3], x[:, 4], x[:, 5])
     cosv = np.clip(np.sum(z_axis * n_true, axis=1), -1.0, 1.0)
@@ -250,13 +249,88 @@ def _planner_cfg(
     )
 
 
+def _piecewise_linear_path(
+    x_start: np.ndarray,
+    x_mid: np.ndarray,
+    x_goal: np.ndarray,
+    *,
+    n_waypoints: int,
+) -> np.ndarray:
+    n = int(max(3, n_waypoints))
+    n1 = max(2, n // 2 + 1)
+    n2 = max(2, n - n1 + 1)
+    p1 = build_linear_path(
+        np.asarray(x_start, dtype=np.float32),
+        np.asarray(x_mid, dtype=np.float32),
+        n_waypoints=n1,
+        periodic=False,
+    )
+    p2 = build_linear_path(
+        np.asarray(x_mid, dtype=np.float32),
+        np.asarray(x_goal, dtype=np.float32),
+        n_waypoints=n2,
+        periodic=False,
+    )
+    out = np.concatenate([p1[:-1], p2], axis=0).astype(np.float32)
+    if len(out) != n:
+        idx = np.linspace(0, len(out) - 1, num=n, dtype=np.int32)
+        out = out[idx].astype(np.float32)
+    out[0] = np.asarray(x_start, dtype=np.float32)
+    out[-1] = np.asarray(x_goal, dtype=np.float32)
+    out[:, 3:6] = _wrap_pi(out[:, 3:6])
+    return out
+
+
+def _point_project_path(
+    model: nn.Module,
+    init_path: np.ndarray,
+    *,
+    x_start: np.ndarray,
+    x_goal: np.ndarray,
+    device: str,
+    proj_steps: int,
+    proj_alpha: float,
+    proj_min_steps: int,
+    f_abs_stop: float | None = None,
+) -> np.ndarray:
+    proj, _steps = project_points_with_steps_numpy(
+        model,
+        np.asarray(init_path, dtype=np.float32),
+        device=str(device),
+        proj_steps=int(proj_steps),
+        proj_alpha=float(proj_alpha),
+        proj_min_steps=int(proj_min_steps),
+        f_abs_stop=(None if f_abs_stop is None else float(f_abs_stop)),
+    )
+    out = np.asarray(proj, dtype=np.float32)
+    out[0] = np.asarray(x_start, dtype=np.float32)
+    out[-1] = np.asarray(x_goal, dtype=np.float32)
+    out[:, 3:6] = _wrap_pi(out[:, 3:6])
+    return out
+
+
 def _load_model(ckpt_path: str, device: str) -> tuple[nn.Module, dict[str, Any]]:
     ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
     in_dim = int(ckpt["in_dim"])
     out_dim = int(ckpt["constraint_dim"])
     hidden = int(ckpt["hidden"])
     depth = int(ckpt["depth"])
-    model = MLP(in_dim=in_dim, hidden=hidden, depth=depth, out_dim=out_dim).to(device)
+    model_type = str(ckpt.get("model_type", "mlp"))
+    if model_type == "normalized_mlp":
+        state = ckpt["model_state"]
+        center = state.get("input_center", torch.zeros((in_dim,), dtype=torch.float32))
+        scale = state.get("input_scale", torch.ones((in_dim,), dtype=torch.float32))
+        model = NormalizedMLP(
+            in_dim=in_dim,
+            hidden=hidden,
+            depth=depth,
+            out_dim=out_dim,
+            center=center,
+            scale=scale,
+            angle_dims=tuple(int(v) for v in ckpt.get("input_angle_dims", [])),
+        ).to(device)
+    else:
+        model = MLP(in_dim=in_dim, hidden=hidden, depth=depth, out_dim=out_dim).to(device)
     model.load_state_dict(ckpt["model_state"])
     model.eval()
     return model, ckpt
@@ -286,6 +360,7 @@ def _plan_with_obstacle(
     rng: np.random.Generator,
     n_trajs: int,
     n_waypoints: int,
+    planner_mode: str,
     center: np.ndarray,
     radius: float,
     min_dist: float,
@@ -297,9 +372,14 @@ def _plan_with_obstacle(
     cross_side_margin: float,
     cross_y_band: float,
     pair_tries: int,
+    selected_endpoints: list[np.ndarray] | None = None,
 ) -> list[PairCase]:
     cases: list[PairCase] = []
-    selected_endpoints: list[np.ndarray] = []
+    if selected_endpoints is None:
+        selected_endpoints = []
+    planner_mode_norm = str(planner_mode).strip().lower()
+    if planner_mode_norm not in {"traj_opt", "point_project"}:
+        raise ValueError(f"unsupported planner_mode: {planner_mode}")
     for _ in range(int(n_trajs)):
         avoid = np.asarray(selected_endpoints, dtype=np.float32) if len(selected_endpoints) > 0 else None
         try:
@@ -338,17 +418,59 @@ def _plan_with_obstacle(
                 tries=max(400, pair_tries // 2),
             )
         t0 = time.time()
-        # Single-shot trajectory optimization to avoid sharp corner from segment stitching.
-        traj = plan_path(
-            model=model,
-            x_start=start,
-            x_goal=goal,
-            cfg=cfg,
-            planner_name="traj_opt",
-            n_waypoints=int(n_waypoints),
-            dataset_name=DATASET_NAME,
-            periodic_joint=False,
-        )
+        waypoint = None
+        if planner_mode_norm == "traj_opt":
+            # Single-shot trajectory optimization to avoid sharp corner from segment stitching.
+            traj = plan_path(
+                model=model,
+                x_start=start,
+                x_goal=goal,
+                cfg=cfg,
+                planner_name="traj_opt",
+                n_waypoints=int(n_waypoints),
+                dataset_name=DATASET_NAME,
+                periodic_joint=False,
+            )
+        else:
+            safety_radius = float(radius) + float(cfg.planner.get("obstacle_margin", 0.0))
+            intersects = _line_intersects_circle_xy(
+                start,
+                goal,
+                center=center,
+                radius=safety_radius,
+            )
+            if intersects:
+                waypoint = _pick_waypoint_around_circle(
+                    start,
+                    goal,
+                    pool=pool,
+                    center=center,
+                    radius=safety_radius,
+                ).astype(np.float32)
+                init = _piecewise_linear_path(
+                    start,
+                    waypoint,
+                    goal,
+                    n_waypoints=int(n_waypoints),
+                )
+            else:
+                init = build_linear_path(
+                    np.asarray(start, dtype=np.float32),
+                    np.asarray(goal, dtype=np.float32),
+                    n_waypoints=int(n_waypoints),
+                    periodic=False,
+                ).astype(np.float32)
+            traj = _point_project_path(
+                model,
+                init,
+                x_start=start,
+                x_goal=goal,
+                device=str(cfg.device),
+                proj_steps=int(cfg.projector["steps"]),
+                proj_alpha=float(cfg.projector["alpha"]),
+                proj_min_steps=int(cfg.projector["min_steps"]),
+                f_abs_stop=None,
+            )
         plan_t = float(time.time() - t0)
         traj[:, 3:6] = _wrap_pi(traj[:, 3:6])
         min_d = _path_min_dist_to_circle_xy(traj, center=center, radius=radius)
@@ -356,7 +478,7 @@ def _plan_with_obstacle(
             PairCase(
                 start=start.astype(np.float32),
                 goal=goal.astype(np.float32),
-                waypoint=None,
+                waypoint=(None if waypoint is None else waypoint.astype(np.float32)),
                 traj=traj.astype(np.float32),
                 plan_seconds=plan_t,
                 min_obstacle_dist_xy=min_d,
@@ -381,7 +503,22 @@ def _plot_planning_paper(
     center: np.ndarray,
     radius: float,
     out_path: str,
+    traj_labels: list[str] | None = None,
+    traj_colors: list[str] | None = None,
+    traj_linestyles: list[str] | None = None,
+    surface_affine_scale: float = 1.0,
+    surface_affine_offset: np.ndarray | None = None,
+    global_paper_view: bool = False,
+    surface_cfg: Any | None = None,
+    orientation_arrow_length: float | None = None,
 ) -> None:
+    aff_scale = float(surface_affine_scale)
+    aff_offset = (
+        np.asarray(surface_affine_offset, dtype=np.float32).reshape(3)
+        if surface_affine_offset is not None
+        else np.zeros((3,), dtype=np.float32)
+    )
+    env_scale, env_offset = sine_surface_affine_params(surface_cfg)
     g_res = int(max(24, surface_grid))
     if str(surface_source).lower() == "learned":
         n_surface = min(max(400, int(surface_points)), len(pool))
@@ -424,13 +561,25 @@ def _plot_planning_paper(
         nn_thr = float(np.percentile(nn_dist, float(surface_mask_percentile)))
         z_grid = z_idw.reshape(gxx.shape)
         z_grid[nn_dist.reshape(gxx.shape) > nn_thr] = np.nan
+        if abs(aff_scale - 1.0) > 1e-8 or float(np.linalg.norm(aff_offset)) > 1e-8:
+            sx_t = aff_scale * gxx + aff_offset[0]
+            sy_t = aff_scale * gyy + aff_offset[1]
+            sz_t = aff_scale * z_grid + aff_offset[2]
+        else:
+            sx_t, sy_t, sz_t = gxx, gyy, z_grid
         surface_label = "Learned equality constraint"
     else:
-        gx = np.linspace(-2.0, 2.0, g_res).astype(np.float32)
-        gy = np.linspace(-2.0, 2.0, g_res).astype(np.float32)
+        gx = (float(env_scale) * np.linspace(-2.0, 2.0, g_res).astype(np.float32) + float(env_offset[0])).astype(np.float32)
+        gy = (float(env_scale) * np.linspace(-2.0, 2.0, g_res).astype(np.float32) + float(env_offset[1])).astype(np.float32)
         gxx, gyy = np.meshgrid(gx, gy)
-        z_grid, _ = _workspace_surface_z_and_normal_from_xy(gxx.reshape(-1), gyy.reshape(-1))
+        z_grid, _ = _workspace_surface_z_and_normal_from_xy(gxx.reshape(-1), gyy.reshape(-1), surface_cfg)
         z_grid = z_grid.reshape(gxx.shape)
+        if abs(aff_scale - 1.0) > 1e-8 or float(np.linalg.norm(aff_offset)) > 1e-8:
+            sx_t = aff_scale * gxx + aff_offset[0]
+            sy_t = aff_scale * gyy + aff_offset[1]
+            sz_t = aff_scale * z_grid + aff_offset[2]
+        else:
+            sx_t, sy_t, sz_t = gxx, gyy, z_grid
         surface_label = "True equality constraint"
 
     with plt.rc_context(
@@ -445,9 +594,9 @@ def _plot_planning_paper(
         fig = plt.figure(figsize=(3.45, 2.9))
         ax = fig.add_subplot(111, projection="3d")
         ax.plot_surface(
-            gxx,
-            gyy,
-            z_grid,
+            sx_t,
+            sy_t,
+            sz_t,
             color="#22d3ee",
             alpha=0.30,
             linewidth=0.23,
@@ -460,14 +609,18 @@ def _plot_planning_paper(
         th = np.linspace(0.0, 2.0 * np.pi, 80)
         cx = center[0] + radius * np.cos(th)
         cy = center[1] + radius * np.sin(th)
-        z_inter, _ = _workspace_surface_z_and_normal_from_xy(cx.astype(np.float32), cy.astype(np.float32))
-        # Short cylinder around the surface intersection band for clearer localization.
-        z_min = float(np.min(z_inter) - 0.18)
-        z_max = float(np.max(z_inter) + 0.18)
+        z_inter, _ = _workspace_surface_z_and_normal_from_xy(cx.astype(np.float32), cy.astype(np.float32), surface_cfg)
+        cx_t = aff_scale * cx + aff_offset[0]
+        cy_t = aff_scale * cy + aff_offset[1]
+        z_inter_t = aff_scale * z_inter + aff_offset[2]
+        # Use scale-proportional obstacle height in affine views to preserve apparent size.
+        z_band = 0.18 * max(aff_scale, 1e-6)
+        z_min = float(np.min(z_inter_t) - z_band)
+        z_max = float(np.max(z_inter_t) + z_band)
         zz_c = np.linspace(z_min, z_max, 24)
         th_m, zz_m = np.meshgrid(th, zz_c)
-        cx_m = center[0] + radius * np.cos(th_m)
-        cy_m = center[1] + radius * np.sin(th_m)
+        cx_m = aff_scale * (center[0] + radius * np.cos(th_m)) + aff_offset[0]
+        cy_m = aff_scale * (center[1] + radius * np.sin(th_m)) + aff_offset[1]
         ax.plot_surface(
             cx_m,
             cy_m,
@@ -482,19 +635,20 @@ def _plot_planning_paper(
         )
         # Intersection curve between obstacle cylinder and surface.
         ax.plot(
-            cx,
-            cy,
-            z_inter,
+            cx_t,
+            cy_t,
+            z_inter_t,
             color="#7c2d12",
             linewidth=1.2,
             alpha=0.95,
         )
 
-        colors = ["#b91c1c", "#2563eb", "#16a34a", "#ea580c"]
+        colors = list(traj_colors) if traj_colors is not None else ["#b91c1c", "#2563eb", "#16a34a", "#ea580c"]
+        linestyles = list(traj_linestyles) if traj_linestyles is not None else ["-"] * len(cases)
         traj_legend_handles: list[Line2D] = []
-        orient_legend_handles: list[Line2D] = []
         for i, c in enumerate(cases):
             col = colors[i % len(colors)]
+            ls = linestyles[i % len(linestyles)] if len(linestyles) > 0 else "-"
             tr = c.traj
             ax.plot(
                 tr[:, 0],
@@ -502,22 +656,12 @@ def _plot_planning_paper(
                 tr[:, 2],
                 color=col,
                 linewidth=1.1,
+                linestyle=ls,
                 alpha=0.95,
                 label="_nolegend_",
             )
             if i < 3:
-                traj_legend_handles.append(Line2D([0], [0], color=col, linewidth=1.5))
-                orient_legend_handles.append(
-                    Line2D(
-                        [0],
-                        [0],
-                        color=col,
-                        linewidth=0.9,
-                        marker=">",
-                        markersize=5.5,
-                        linestyle="-",
-                    )
-                )
+                traj_legend_handles.append(Line2D([0], [0], color=col, linewidth=1.5, linestyle=ls))
             ax.scatter(tr[0, 0], tr[0, 1], tr[0, 2], s=8, c=col, marker="o", alpha=0.95, label="_nolegend_")
             ax.scatter(tr[-1, 0], tr[-1, 1], tr[-1, 2], s=8, c=col, marker="s", alpha=0.95, label="_nolegend_")
             # Draw orientation arrows every ~10 points along trajectory.
@@ -527,6 +671,11 @@ def _plot_planning_paper(
                 idx = np.concatenate([idx, np.array([tr.shape[0] - 1], dtype=int)])
             rpy = tr[idx, 3:6]
             dirs = _rpy_zyx_to_local_z(rpy[:, 0], rpy[:, 1], rpy[:, 2])
+            arrow_len = float(
+                orientation_arrow_length
+                if orientation_arrow_length is not None
+                else max(0.08, 0.24 * aff_scale)
+            )
             ax.quiver(
                 tr[idx, 0],
                 tr[idx, 1],
@@ -534,31 +683,66 @@ def _plot_planning_paper(
                 dirs[:, 0],
                 dirs[:, 1],
                 dirs[:, 2],
-                length=0.24,
+                length=arrow_len,
                 normalize=True,
                 color=col,
                 linewidths=0.75,
                 alpha=0.88,
-                arrow_length_ratio=0.40,
+                arrow_length_ratio=0.28,
             )
 
         ax.set_xlabel("x", fontsize=8, labelpad=1)
         ax.set_ylabel("y", fontsize=8, labelpad=1)
         ax.set_zlabel("z", fontsize=8, labelpad=1)
         ax.tick_params(labelsize=7, pad=0)
-        ax.set_xlim(-2.2, 2.2)
-        ax.set_ylim(-2.2, 2.2)
-        z_vals_surface = np.asarray(z_grid[np.isfinite(z_grid)], dtype=np.float32)
-        z_vals_traj = np.concatenate([c.traj[:, 2] for c in cases], axis=0).astype(np.float32)
-        z_all = np.concatenate([z_vals_surface, z_vals_traj, z_inter.astype(np.float32)], axis=0)
-        z_pad = 0.15
-        ax.set_zlim(float(np.min(z_all) - z_pad), 0.75)
+        if bool(global_paper_view):
+            x_lo = float(aff_scale * (float(env_scale) * (-2.0) + float(env_offset[0])) + aff_offset[0])
+            x_hi = float(aff_scale * (float(env_scale) * (2.0) + float(env_offset[0])) + aff_offset[0])
+            y_lo = float(aff_scale * (float(env_scale) * (-2.0) + float(env_offset[1])) + aff_offset[1])
+            y_hi = float(aff_scale * (float(env_scale) * (2.0) + float(env_offset[1])) + aff_offset[1])
+            z_lo = float(np.nanmin(sz_t))
+            z_hi = float(np.nanmax(sz_t))
+            ax.set_xlim(x_lo, x_hi)
+            ax.set_ylim(y_lo, y_hi)
+            ax.set_zlim(z_lo, z_hi)
+            try:
+                ax.set_box_aspect((x_hi - x_lo, y_hi - y_lo, z_hi - z_lo))
+            except Exception:
+                pass
+        else:
+            x_vals_surface = np.asarray(sx_t[np.isfinite(sz_t)], dtype=np.float32)
+            y_vals_surface = np.asarray(sy_t[np.isfinite(sz_t)], dtype=np.float32)
+            x_vals_traj = np.concatenate([c.traj[:, 0] for c in cases], axis=0).astype(np.float32)
+            y_vals_traj = np.concatenate([c.traj[:, 1] for c in cases], axis=0).astype(np.float32)
+            z_vals_surface = np.asarray(sz_t[np.isfinite(sz_t)], dtype=np.float32)
+            z_vals_traj = np.concatenate([c.traj[:, 2] for c in cases], axis=0).astype(np.float32)
+            x_all = np.concatenate([x_vals_surface, x_vals_traj, cx_t.astype(np.float32)], axis=0)
+            y_all = np.concatenate([y_vals_surface, y_vals_traj, cy_t.astype(np.float32)], axis=0)
+            z_all = np.concatenate([z_vals_surface, z_vals_traj, z_inter_t.astype(np.float32)], axis=0)
+            x_rng = float(max(np.max(x_all) - np.min(x_all), 1e-3))
+            y_rng = float(max(np.max(y_all) - np.min(y_all), 1e-3))
+            z_rng = float(max(np.max(z_all) - np.min(z_all), 1e-3))
+            x_pad = max(0.06, 0.12 * x_rng)
+            y_pad = max(0.06, 0.12 * y_rng)
+            z_pad = max(0.05, 0.18 * z_rng)
+            ax.set_xlim(float(np.min(x_all) - x_pad), float(np.max(x_all) + x_pad))
+            ax.set_ylim(float(np.min(y_all) - y_pad), float(np.max(y_all) + y_pad))
+            ax.set_zlim(float(np.min(z_all) - z_pad), float(np.max(z_all) + 0.55 * z_pad))
+            try:
+                ax.set_box_aspect((x_rng + 2.0 * x_pad, y_rng + 2.0 * y_pad, z_rng + 1.55 * z_pad))
+            except Exception:
+                pass
         ax.view_init(elev=60, azim=-64)
         h_surface = Patch(facecolor="#22d3ee", edgecolor=(0, 0, 0, 0.24), alpha=0.30)
         h_obstacle = Patch(facecolor="#f59e0b", edgecolor=(0.40, 0.18, 0.0, 0.35), alpha=0.26)
         handles: list[Any] = [h_surface, h_obstacle]
         labels = [surface_label, "Known cylindrical obstacle"]
-        if len(traj_legend_handles) > 0:
+        if traj_labels is not None and len(traj_labels) > 0:
+            for i, lab in enumerate(traj_labels[: len(cases)]):
+                ls = linestyles[i % len(linestyles)] if len(linestyles) > 0 else "-"
+                handles.append(Line2D([0], [0], color=colors[i % len(colors)], linewidth=1.5, linestyle=ls))
+                labels.append(str(lab))
+        elif len(traj_legend_handles) > 0:
             handles.append(tuple(traj_legend_handles))
             labels.append("Plan with learned constraint")
         ax.legend(
@@ -583,9 +767,20 @@ def _plot_error_distribution_paper(
     pos_err: np.ndarray,
     ang_err_deg: np.ndarray,
     out_path: str,
+    pos_err_compare: np.ndarray | None = None,
+    ang_err_deg_compare: np.ndarray | None = None,
+    primary_label: str = "Primary",
+    compare_label: str = "Compare",
 ) -> None:
-    pos_cap = max(float(np.percentile(pos_err, 99)), 1e-4)
-    ang_cap = max(float(np.percentile(ang_err_deg, 99)), 1.0)
+    pos_arrays = [np.asarray(pos_err, dtype=np.float32).reshape(-1)]
+    ang_arrays = [np.asarray(ang_err_deg, dtype=np.float32).reshape(-1)]
+    if pos_err_compare is not None and ang_err_deg_compare is not None:
+        pos_arrays.append(np.asarray(pos_err_compare, dtype=np.float32).reshape(-1))
+        ang_arrays.append(np.asarray(ang_err_deg_compare, dtype=np.float32).reshape(-1))
+    pos_cat = np.concatenate(pos_arrays, axis=0)
+    ang_cat = np.concatenate(ang_arrays, axis=0)
+    pos_cap = max(float(np.percentile(pos_cat, 99)), 1e-4)
+    ang_cap = max(float(np.percentile(ang_cat, 99)), 1.0)
     with plt.rc_context(
         {
             "font.size": 8,
@@ -599,14 +794,24 @@ def _plot_error_distribution_paper(
         ax1 = fig.add_subplot(1, 2, 1)
         ax2 = fig.add_subplot(1, 2, 2)
 
-        ax1.hist(pos_err, bins=np.linspace(0.0, pos_cap, 34), color="#4C78A8", alpha=0.82)
+        bins_pos = np.linspace(0.0, pos_cap, 34)
+        bins_ang = np.linspace(0.0, ang_cap, 34)
+        ax1.hist(pos_err, bins=bins_pos, color="#4C78A8", alpha=0.82, label=primary_label)
+        if pos_err_compare is not None:
+            ax1.hist(pos_err_compare, bins=bins_pos, color="#F58518", alpha=0.62, label=compare_label)
         ax1.set_xlabel("Position Error")
         ax1.set_ylabel("Count")
         ax1.grid(alpha=0.22)
+        if pos_err_compare is not None:
+            ax1.legend(loc="best", fontsize=6.5)
 
-        ax2.hist(ang_err_deg, bins=np.linspace(0.0, ang_cap, 34), color="#E45756", alpha=0.82)
+        ax2.hist(ang_err_deg, bins=bins_ang, color="#E45756", alpha=0.82, label=primary_label)
+        if ang_err_deg_compare is not None:
+            ax2.hist(ang_err_deg_compare, bins=bins_ang, color="#72B7B2", alpha=0.62, label=compare_label)
         ax2.set_xlabel("Orientation Error (deg)")
         ax2.grid(alpha=0.22)
+        if ang_err_deg_compare is not None:
+            ax2.legend(loc="best", fontsize=6.5)
 
         fig.tight_layout(pad=0.25)
         fig.savefig(out_path, dpi=300, bbox_inches="tight", pad_inches=0.02)
@@ -679,6 +884,7 @@ def main() -> None:
 
     parser.add_argument("--opt-steps", type=int, default=1240, help="traj_opt iterations.")
     parser.add_argument("--opt-lr", type=float, default=0.01, help="traj_opt learning rate.")
+    parser.add_argument("--planner-mode", choices=["traj_opt", "point_project"], default="traj_opt", help="Planning mode.")
     parser.add_argument("--lam-manifold", type=float, default=1.0, help="Manifold loss weight.")
     parser.add_argument("--lam-len-joint", type=float, default=0.4, help="Path length loss weight.")
     parser.add_argument("--lam-smooth", type=float, default=0.2, help="Smoothness loss weight.")
@@ -703,7 +909,20 @@ def main() -> None:
 
     device = _choose_device(str(args.device))
     model, ckpt = _load_model(ckpt_path, device=device)
+    surface_cfg = SimpleNamespace(**dict(ckpt.get("cfg", {})))
     x_train, pool = _build_data_pool(ckpt, seed=int(args.seed))
+    _, surface_offset = sine_surface_affine_params(surface_cfg)
+    center = sine_surface_apply_affine_xy(
+        np.asarray([[float(args.obstacle_cx), float(args.obstacle_cy)]], dtype=np.float32),
+        surface_cfg,
+    )[0]
+    radius = float(sine_surface_apply_affine_scalar(float(args.obstacle_radius), surface_cfg))
+    obstacle_margin = float(sine_surface_apply_affine_scalar(float(args.obstacle_margin), surface_cfg))
+    pair_min_dist = float(sine_surface_apply_affine_scalar(float(args.pair_min_dist), surface_cfg))
+    pair_max_dist = float(sine_surface_apply_affine_scalar(float(args.pair_max_dist), surface_cfg))
+    pair_max_y = float(float(args.pair_max_y) * float(sine_surface_affine_params(surface_cfg)[0]) + float(surface_offset[1]))
+    pair_cross_side_margin = float(sine_surface_apply_affine_scalar(float(args.pair_cross_side_margin), surface_cfg))
+    pair_cross_y_band = float(sine_surface_apply_affine_scalar(float(args.pair_cross_y_band), surface_cfg))
     cfg = _planner_cfg(
         device=device,
         opt_steps=int(args.opt_steps),
@@ -716,14 +935,11 @@ def main() -> None:
         proj_alpha=float(args.proj_alpha),
         proj_min_steps=int(args.proj_min_steps),
         obstacle_enable=True,
-        obstacle_center_xy=(float(args.obstacle_cx), float(args.obstacle_cy)),
-        obstacle_radius=float(args.obstacle_radius),
-        obstacle_margin=float(args.obstacle_margin),
+        obstacle_center_xy=(float(center[0]), float(center[1])),
+        obstacle_radius=float(radius),
+        obstacle_margin=float(obstacle_margin),
         lam_obstacle=float(args.lam_obstacle),
     )
-
-    center = np.array([float(args.obstacle_cx), float(args.obstacle_cy)], dtype=np.float32)
-    radius = float(args.obstacle_radius)
     cases = _plan_with_obstacle(
         model=model,
         cfg=cfg,
@@ -731,21 +947,22 @@ def main() -> None:
         rng=rng,
         n_trajs=int(args.n_trajs),
         n_waypoints=int(args.n_waypoints),
+        planner_mode=str(args.planner_mode),
         center=center,
         radius=radius,
-        min_dist=float(args.pair_min_dist),
-        max_dist=float(args.pair_max_dist),
-        max_y=float(args.pair_max_y),
+        min_dist=float(pair_min_dist),
+        max_dist=float(pair_max_dist),
+        max_y=float(pair_max_y),
         diverse_min_dist=float(args.pair_diverse_min_dist),
         force_cross_obstacle=bool(args.pair_force_cross_obstacle),
         cross_radius_scale=float(args.pair_cross_radius_scale),
-        cross_side_margin=float(args.pair_cross_side_margin),
-        cross_y_band=float(args.pair_cross_y_band),
+        cross_side_margin=float(pair_cross_side_margin),
+        cross_y_band=float(pair_cross_y_band),
         pair_tries=int(args.pair_tries),
     )
 
     pts_all = np.concatenate([c.traj for c in cases], axis=0).astype(np.float32)
-    pos_err, ang_err_deg = _error_to_true_constraint(pts_all)
+    pos_err, ang_err_deg = _error_to_true_constraint(pts_all, surface_cfg)
 
     point_csv = os.path.join(outdir, "sinepose_planning_pointwise_errors.csv")
     _save_pointwise_csv(point_csv, cases, pos_err, ang_err_deg)
@@ -764,6 +981,7 @@ def main() -> None:
         center=center,
         radius=radius,
         out_path=traj_fig,
+        surface_cfg=surface_cfg,
     )
     dist_fig = os.path.join(outdir, "6d_workspace_sine_surface_pose_traj_oncl_planning_error_distribution_paper.png")
     _plot_error_distribution_paper(pos_err=pos_err, ang_err_deg=ang_err_deg, out_path=dist_fig)

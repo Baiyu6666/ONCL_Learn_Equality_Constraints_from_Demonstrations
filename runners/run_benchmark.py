@@ -7,11 +7,14 @@ import glob
 import json
 import os
 import shutil
+import sys
 import time
 from collections import defaultdict
 from typing import Any
 
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
 # Keep local W&B files under repo-root/wandb regardless of launch cwd.
 os.environ["WANDB_DIR"] = os.path.join(_PROJECT_ROOT, "wandb")
 
@@ -52,7 +55,7 @@ def _clear_directory(path: str) -> None:
             os.remove(p)
 
 
-def _prepare_outdir(path: str, *, clearn_dir: bool, resume: bool) -> None:
+def _prepare_outdir(path: str, *, clearn_dir: bool, resume: bool, rewrite: bool) -> None:
     if os.path.exists(path) and not os.path.isdir(path):
         raise ValueError(f"outdir exists but is not a directory: {path}")
     if not os.path.exists(path):
@@ -69,12 +72,14 @@ def _prepare_outdir(path: str, *, clearn_dir: bool, resume: bool) -> None:
         print(f"[clearn_dir] clearing existing outdir: {path}")
         _clear_directory(path)
         return
-    if resume:
-        print(f"[resume] using existing outdir for incremental runs: {path}")
+    if resume or rewrite:
+        mode = "rewrite" if rewrite else "resume"
+        print(f"[{mode}] using existing outdir for incremental runs: {path}")
         return
     raise ValueError(
         "outdir already exists and is not empty; refusing to mix old/new results. "
-        "Use --resume for incremental runs, --clearn_dir (or -clearn_dir) to clear it first, "
+        "Use --resume for incremental runs, --rewrite to replace selected runs, "
+        "--clearn_dir (or -clearn_dir) to clear it first, "
         "or choose a new --outdir."
     )
 
@@ -198,10 +203,11 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--outdir", default="outputs")
     p.add_argument("-clearn_dir", "--clearn_dir", action="store_true", help="if outdir is non-empty, ask once for confirmation (type 1) then clear it")
     p.add_argument("-resume", "--resume", action="store_true", help="incrementally append to an existing outdir and skip completed runs")
+    p.add_argument("--rewrite", action="store_true", help="reuse an existing outdir but rerun and replace matching method/dataset/seed runs")
     p.add_argument("--config-root", default="configs")
     p.add_argument("--override", action="append", default=[], help="dotted key=value override")
 
-    p.add_argument("--wandb-enable", action="store_true", default=True)
+    p.add_argument("--wandb-enable", action="store_true")
     p.add_argument("--wandb-project", default="LearnEqConstraints")
     p.add_argument("--wandb-entity", default="")
     p.add_argument("--wandb-run-name", default="")
@@ -257,6 +263,13 @@ def _append_jsonl(path: str, row: dict[str, Any]) -> None:
         f.flush()
 
 
+def _write_jsonl(path: str, rows: list[dict[str, Any]]) -> None:
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        for row in rows:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+
 def _seed_key(v: Any) -> str:
     return str(v).strip()
 
@@ -297,6 +310,7 @@ def _load_existing_results(outdir: str) -> list[dict[str, Any]]:
             continue
         k = _run_key(row.get("method", ""), row.get("dataset", ""), row.get("seed", ""))
         by_key[k] = {
+            "timestamp": row.get("timestamp", ""),
             "method": row.get("method", ""),
             "dataset": row.get("dataset", ""),
             "seed": row.get("seed", ""),
@@ -369,18 +383,24 @@ def main() -> None:
         _run_key(m, ds, s) for m in methods for ds in datasets for s in seed_values
     }
 
-    if bool(args.clearn_dir) and bool(args.resume):
-        raise ValueError("--clearn_dir and --resume cannot be used together")
-    _prepare_outdir(outdir, clearn_dir=bool(args.clearn_dir), resume=bool(args.resume))
+    if bool(args.clearn_dir) and (bool(args.resume) or bool(args.rewrite)):
+        raise ValueError("--clearn_dir cannot be used together with --resume or --rewrite")
+    _prepare_outdir(
+        outdir,
+        clearn_dir=bool(args.clearn_dir),
+        resume=bool(args.resume),
+        rewrite=bool(args.rewrite),
+    )
     effective_overrides = _with_default_non_gif_overrides(args.override)
     partial_jsonl = os.path.join(outdir, "per_run_metrics.jsonl")
     partial_summary = os.path.join(outdir, "summary_metrics.partial.json")
-    existing_rows: list[dict[str, Any]] = _load_existing_results(outdir) if bool(args.resume) else []
+    existing_rows: list[dict[str, Any]] = _load_existing_results(outdir) if (bool(args.resume) or bool(args.rewrite)) else []
     completed_keys: set[tuple[str, str, str]] = {
         _run_key(r.get("method", ""), r.get("dataset", ""), r.get("seed", "")) for r in existing_rows
     }
     if existing_rows:
-        print(f"[resume] loaded existing runs: {len(existing_rows)}")
+        mode = "rewrite" if bool(args.rewrite) else "resume"
+        print(f"[{mode}] loaded existing runs: {len(existing_rows)}")
 
     wb_run = None
     if args.wandb_enable:
@@ -397,6 +417,8 @@ def main() -> None:
                     "seeds": seed_values,
                     "config_root": config_root,
                     "override": args.override,
+                    "resume": bool(args.resume),
+                    "rewrite": bool(args.rewrite),
                 },
             )
 
@@ -404,6 +426,7 @@ def main() -> None:
     for r in existing_rows:
         all_results.append(
             {
+                "timestamp": r.get("timestamp", ""),
                 "method": r.get("method", ""),
                 "dataset": r.get("dataset", ""),
                 "seed": r.get("seed", ""),
@@ -419,7 +442,7 @@ def main() -> None:
         for dataset in datasets:
             for seed in seed_values:
                 key = _run_key(method, dataset, seed)
-                if key in completed_keys:
+                if key in completed_keys and not bool(args.rewrite):
                     print(f"[skip] method={method} dataset={dataset} seed={seed} already exists (resume)")
                     done_per_method[method] += 1
                     _print_progress_snapshot(
@@ -431,6 +454,13 @@ def main() -> None:
                         expected_keys=expected_keys,
                     )
                     continue
+                if key in completed_keys and bool(args.rewrite):
+                    print(f"[rewrite] method={method} dataset={dataset} seed={seed} already exists; rerunning and replacing")
+                    all_results = [
+                        r for r in all_results
+                        if _run_key(r.get("method", ""), r.get("dataset", ""), r.get("seed", "")) != key
+                    ]
+                    completed_keys.discard(key)
                 print(f"[run] method={method} dataset={dataset} seed={seed}")
                 result, loaded = run_one(
                     method=method,
@@ -440,7 +470,9 @@ def main() -> None:
                     config_root=config_root,
                     cli_overrides=effective_overrides,
                 )
+                timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
                 result["seed"] = seed
+                result["timestamp"] = timestamp
                 result["loaded_config_paths"] = loaded
                 all_results.append(result)
                 completed_keys.add(key)
@@ -448,7 +480,7 @@ def main() -> None:
                 # Persist each finished run immediately so interrupted benchmarks
                 # can still be recovered/aggregated.
                 row = {
-                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+                    "timestamp": timestamp,
                     "method": method,
                     "dataset": dataset,
                     "seed": seed,
@@ -456,7 +488,24 @@ def main() -> None:
                     "config": result.get("config", {}),
                     "loaded_config_paths": loaded,
                 }
-                _append_jsonl(partial_jsonl, row)
+                if bool(args.rewrite):
+                    _write_jsonl(
+                        partial_jsonl,
+                        [
+                            {
+                                "timestamp": r.get("timestamp", ""),
+                                "method": r.get("method", ""),
+                                "dataset": r.get("dataset", ""),
+                                "seed": r.get("seed", ""),
+                                "metrics": r.get("metrics", {}),
+                                "config": r.get("config", {}),
+                                "loaded_config_paths": r.get("loaded_config_paths", []),
+                            }
+                            for r in all_results
+                        ],
+                    )
+                else:
+                    _append_jsonl(partial_jsonl, row)
                 with open(partial_summary, "w", encoding="utf-8") as f:
                     json.dump(all_results, f, indent=2, ensure_ascii=False)
 

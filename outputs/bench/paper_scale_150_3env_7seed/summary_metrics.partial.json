@@ -1,5 +1,6 @@
 [
   {
+    "timestamp": "2026-03-09 11:38:18",
     "method": "oncl",
     "dataset": "3d_spatial_arm_ellip_n3_traj",
     "seed": 0,
@@ -100,6 +101,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 11:38:38",
     "method": "oncl",
     "dataset": "3d_spatial_arm_ellip_n3_traj",
     "seed": 1,
@@ -200,6 +202,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 11:38:57",
     "method": "oncl",
     "dataset": "3d_spatial_arm_ellip_n3_traj",
     "seed": 2,
@@ -300,6 +303,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 11:39:14",
     "method": "oncl",
     "dataset": "3d_spatial_arm_ellip_n3_traj",
     "seed": 3,
@@ -400,6 +404,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 11:39:33",
     "method": "oncl",
     "dataset": "3d_spatial_arm_ellip_n3_traj",
     "seed": 4,
@@ -500,6 +505,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 11:39:52",
     "method": "oncl",
     "dataset": "3d_spatial_arm_ellip_n3_traj",
     "seed": 5,
@@ -600,6 +606,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 11:40:11",
     "method": "oncl",
     "dataset": "3d_spatial_arm_ellip_n3_traj",
     "seed": 6,
@@ -700,6 +707,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 11:41:52",
     "method": "ecomann",
     "dataset": "3d_spatial_arm_ellip_n3_traj",
     "seed": 0,
@@ -786,6 +794,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 11:45:06",
     "method": "ecomann",
     "dataset": "3d_spatial_arm_ellip_n3_traj",
     "seed": 1,
@@ -872,6 +881,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 11:50:11",
     "method": "ecomann",
     "dataset": "3d_spatial_arm_ellip_n3_traj",
     "seed": 2,
@@ -958,6 +968,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 11:57:08",
     "method": "ecomann",
     "dataset": "3d_spatial_arm_ellip_n3_traj",
     "seed": 3,
@@ -1044,6 +1055,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 11:58:53",
     "method": "ecomann",
     "dataset": "3d_spatial_arm_ellip_n3_traj",
     "seed": 4,
@@ -1130,6 +1142,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 12:03:45",
     "method": "ecomann",
     "dataset": "3d_spatial_arm_ellip_n3_traj",
     "seed": 5,
@@ -1216,6 +1229,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 12:05:42",
     "method": "ecomann",
     "dataset": "3d_spatial_arm_ellip_n3_traj",
     "seed": 6,
@@ -1302,6 +1316,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 12:06:30",
     "method": "oncl",
     "dataset": "3d_torus_surface_traj",
     "seed": 0,
@@ -1403,6 +1418,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 12:07:00",
     "method": "oncl",
     "dataset": "3d_torus_surface_traj",
     "seed": 1,
@@ -1504,6 +1520,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 12:07:29",
     "method": "oncl",
     "dataset": "3d_torus_surface_traj",
     "seed": 2,
@@ -1605,6 +1622,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 12:07:59",
     "method": "oncl",
     "dataset": "3d_torus_surface_traj",
     "seed": 3,
@@ -1706,6 +1724,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 12:08:28",
     "method": "oncl",
     "dataset": "3d_torus_surface_traj",
     "seed": 4,
@@ -1807,6 +1826,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 12:08:57",
     "method": "oncl",
     "dataset": "3d_torus_surface_traj",
     "seed": 5,
@@ -1908,6 +1928,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 12:09:26",
     "method": "oncl",
     "dataset": "3d_torus_surface_traj",
     "seed": 6,
@@ -2009,6 +2030,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 12:09:53",
     "method": "ecomann",
     "dataset": "3d_torus_surface_traj",
     "seed": 0,
@@ -2095,6 +2117,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 12:10:27",
     "method": "ecomann",
     "dataset": "3d_torus_surface_traj",
     "seed": 1,
@@ -2181,6 +2204,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 12:10:52",
     "method": "ecomann",
     "dataset": "3d_torus_surface_traj",
     "seed": 2,
@@ -2267,6 +2291,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 12:11:41",
     "method": "ecomann",
     "dataset": "3d_torus_surface_traj",
     "seed": 3,
@@ -2353,6 +2378,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 12:12:10",
     "method": "ecomann",
     "dataset": "3d_torus_surface_traj",
     "seed": 4,
@@ -2439,6 +2465,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 12:12:34",
     "method": "ecomann",
     "dataset": "3d_torus_surface_traj",
     "seed": 5,
@@ -2525,6 +2552,7 @@
     ]
   },
   {
+    "timestamp": "2026-03-09 12:12:59",
     "method": "ecomann",
     "dataset": "3d_torus_surface_traj",
     "seed": 6,
@@ -2614,27 +2642,27 @@
     "method": "oncl",
     "dataset": "6d_workspace_sine_surface_pose_traj",
     "metrics": {
-      "pred_on_mean_v": 9.483686881139874e-06,
-      "proj_manifold_dist": 0.05609164014458656,
-      "proj_v_residual": 0.0012866028118878603,
-      "proj_true_dist": 0.31704869866371155,
+      "pred_on_mean_v": 3.593631845433265e-05,
+      "proj_manifold_dist": 0.10966270416975021,
+      "proj_v_residual": 0.0014441171661019325,
+      "proj_true_dist": 0.4549386501312256,
       "proj_steps": 29.0,
-      "pred_recall": 0.8208661417322834,
-      "pred_FPrate": 0.0,
-      "pred_precision": 0.747802734375,
-      "eval_eps_used": 0.006576225161552429,
-      "bidirectional_chamfer": 0.2807363271713257,
-      "gt_to_learned_mean": 0.046785466372966766,
-      "learned_to_gt_mean": 0.23395085334777832,
-      "gt_to_learned_p95": 0.09224295616149902,
-      "learned_to_gt_p95": 1.0072015523910522,
+      "pred_recall": 0.7303149606299213,
+      "pred_FPrate": 0.00146484375,
+      "pred_precision": 0.10546875,
+      "eval_eps_used": 0.013474175706505775,
+      "bidirectional_chamfer": 0.08401951938867569,
+      "gt_to_learned_mean": 0.017469758167862892,
+      "learned_to_gt_mean": 0.06654976308345795,
+      "gt_to_learned_p95": 0.03113015554845333,
+      "learned_to_gt_p95": 0.3117765784263611,
       "n_gt": 8128.0,
       "n_learned": 4096.0,
-      "eps_stop": 0.006576225161552429,
-      "train_seconds": 126.09102626895765
+      "eps_stop": 0.013474175706505775,
+      "train_seconds": 130.28023516386747
     },
-    "eval_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_eval.json",
-    "ckpt_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_model.pt",
+    "eval_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_eval.json",
+    "ckpt_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_model.pt",
     "config": {
       "seed": 0,
       "device": "cuda",
@@ -2685,16 +2713,6 @@
       "codim_auto_k_neighbors": 16,
       "codim_auto_const_axis_std_ratio": 0.001,
       "codim_auto_strict_check": true,
-      "codim_learn_enable": false,
-      "codim_learn_m_max": 5,
-      "codim_learn_stage1_ratio": 0.1,
-      "codim_learn_sparsity_final": 0.0,
-      "codim_learn_gate_lr": 0.01,
-      "codim_learn_gate_threshold": 0.5,
-      "codim_learn_min_active": 1,
-      "codim_learn_min_active_weight": 1.0,
-      "codim_learn_stage1_lam_oncl": 0.01,
-      "codim_learn_finetune_ratio": 0.1,
       "show_3d_plot": true,
       "surface_plot_n": 28,
       "surface_eval_chunk": 8192,
@@ -2706,38 +2724,39 @@
       "train_log_every": 50
     },
     "loaded_config_paths": [
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/base.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/methods/oncl.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/method_dataset/oncl_6d_workspace_sine_surface_pose_traj.json"
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/base.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/methods/oncl.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/method_dataset/oncl_6d_workspace_sine_surface_pose_traj.json"
     ],
-    "seed": 0
+    "seed": 0,
+    "timestamp": "2026-04-16 10:28:02"
   },
   {
     "method": "oncl",
     "dataset": "6d_workspace_sine_surface_pose_traj",
     "metrics": {
-      "pred_on_mean_v": 7.849727808206808e-06,
-      "proj_manifold_dist": 0.04663417115807533,
-      "proj_v_residual": 0.0014742405619472265,
-      "proj_true_dist": 0.3131219148635864,
+      "pred_on_mean_v": 2.9698510843445547e-05,
+      "proj_manifold_dist": 0.054024048149585724,
+      "proj_v_residual": 0.0005422293907031417,
+      "proj_true_dist": 0.44903701543807983,
       "proj_steps": 29.0,
-      "pred_recall": 0.8462106299212598,
-      "pred_FPrate": 0.0,
-      "pred_precision": 0.772216796875,
-      "eval_eps_used": 0.005626428406685591,
-      "bidirectional_chamfer": 0.2707182765007019,
-      "gt_to_learned_mean": 0.04663831740617752,
-      "learned_to_gt_mean": 0.2240799516439438,
-      "gt_to_learned_p95": 0.09323269873857498,
-      "learned_to_gt_p95": 0.9851542115211487,
+      "pred_recall": 0.7962598425196851,
+      "pred_FPrate": 0.00048828125,
+      "pred_precision": 0.128173828125,
+      "eval_eps_used": 0.012057643383741379,
+      "bidirectional_chamfer": 0.06751413643360138,
+      "gt_to_learned_mean": 0.015617357566952705,
+      "learned_to_gt_mean": 0.05189678072929382,
+      "gt_to_learned_p95": 0.028300512582063675,
+      "learned_to_gt_p95": 0.2768115699291229,
       "n_gt": 8128.0,
       "n_learned": 4096.0,
-      "eps_stop": 0.005626428406685591,
-      "train_seconds": 123.79658408800606
+      "eps_stop": 0.012057643383741379,
+      "train_seconds": 128.5117509861011
     },
-    "eval_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_eval.json",
-    "ckpt_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_model.pt",
+    "eval_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_eval.json",
+    "ckpt_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_model.pt",
     "config": {
       "seed": 1,
       "device": "cuda",
@@ -2788,16 +2807,6 @@
       "codim_auto_k_neighbors": 16,
       "codim_auto_const_axis_std_ratio": 0.001,
       "codim_auto_strict_check": true,
-      "codim_learn_enable": false,
-      "codim_learn_m_max": 5,
-      "codim_learn_stage1_ratio": 0.1,
-      "codim_learn_sparsity_final": 0.0,
-      "codim_learn_gate_lr": 0.01,
-      "codim_learn_gate_threshold": 0.5,
-      "codim_learn_min_active": 1,
-      "codim_learn_min_active_weight": 1.0,
-      "codim_learn_stage1_lam_oncl": 0.01,
-      "codim_learn_finetune_ratio": 0.1,
       "show_3d_plot": true,
       "surface_plot_n": 28,
       "surface_eval_chunk": 8192,
@@ -2809,38 +2818,39 @@
       "train_log_every": 50
     },
     "loaded_config_paths": [
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/base.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/methods/oncl.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/method_dataset/oncl_6d_workspace_sine_surface_pose_traj.json"
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/base.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/methods/oncl.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/method_dataset/oncl_6d_workspace_sine_surface_pose_traj.json"
     ],
-    "seed": 1
+    "seed": 1,
+    "timestamp": "2026-04-16 10:30:11"
   },
   {
     "method": "oncl",
     "dataset": "6d_workspace_sine_surface_pose_traj",
     "metrics": {
-      "pred_on_mean_v": 1.2485019396990538e-05,
-      "proj_manifold_dist": 0.050453104078769684,
-      "proj_v_residual": 0.0014638700522482395,
-      "proj_true_dist": 0.30871328711509705,
+      "pred_on_mean_v": 4.2539515561657026e-05,
+      "proj_manifold_dist": 0.09295770525932312,
+      "proj_v_residual": 0.00290719885379076,
+      "proj_true_dist": 0.45310473442077637,
       "proj_steps": 29.0,
-      "pred_recall": 0.8294783464566929,
-      "pred_FPrate": 0.0,
-      "pred_precision": 0.756591796875,
-      "eval_eps_used": 0.0070862798020243645,
-      "bidirectional_chamfer": 0.2731843590736389,
-      "gt_to_learned_mean": 0.045443594455718994,
-      "learned_to_gt_mean": 0.22774076461791992,
-      "gt_to_learned_p95": 0.0882348120212555,
-      "learned_to_gt_p95": 1.0146433115005493,
+      "pred_recall": 0.8081938976377953,
+      "pred_FPrate": 0.00048828125,
+      "pred_precision": 0.111083984375,
+      "eval_eps_used": 0.014363515190780163,
+      "bidirectional_chamfer": 0.08093637228012085,
+      "gt_to_learned_mean": 0.016506386920809746,
+      "learned_to_gt_mean": 0.06442998349666595,
+      "gt_to_learned_p95": 0.029584987089037895,
+      "learned_to_gt_p95": 0.30101922154426575,
       "n_gt": 8128.0,
       "n_learned": 4096.0,
-      "eps_stop": 0.0070862798020243645,
-      "train_seconds": 124.3681793679716
+      "eps_stop": 0.014363515190780163,
+      "train_seconds": 147.5309965950437
     },
-    "eval_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_eval.json",
-    "ckpt_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_model.pt",
+    "eval_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_eval.json",
+    "ckpt_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_model.pt",
     "config": {
       "seed": 2,
       "device": "cuda",
@@ -2891,16 +2901,6 @@
       "codim_auto_k_neighbors": 16,
       "codim_auto_const_axis_std_ratio": 0.001,
       "codim_auto_strict_check": true,
-      "codim_learn_enable": false,
-      "codim_learn_m_max": 5,
-      "codim_learn_stage1_ratio": 0.1,
-      "codim_learn_sparsity_final": 0.0,
-      "codim_learn_gate_lr": 0.01,
-      "codim_learn_gate_threshold": 0.5,
-      "codim_learn_min_active": 1,
-      "codim_learn_min_active_weight": 1.0,
-      "codim_learn_stage1_lam_oncl": 0.01,
-      "codim_learn_finetune_ratio": 0.1,
       "show_3d_plot": true,
       "surface_plot_n": 28,
       "surface_eval_chunk": 8192,
@@ -2912,38 +2912,39 @@
       "train_log_every": 50
     },
     "loaded_config_paths": [
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/base.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/methods/oncl.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/method_dataset/oncl_6d_workspace_sine_surface_pose_traj.json"
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/base.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/methods/oncl.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/method_dataset/oncl_6d_workspace_sine_surface_pose_traj.json"
     ],
-    "seed": 2
+    "seed": 2,
+    "timestamp": "2026-04-16 10:32:40"
   },
   {
     "method": "oncl",
     "dataset": "6d_workspace_sine_surface_pose_traj",
     "metrics": {
-      "pred_on_mean_v": 2.5031768018379807e-05,
-      "proj_manifold_dist": 0.049396805465221405,
-      "proj_v_residual": 0.002208348363637924,
-      "proj_true_dist": 0.3070722818374634,
+      "pred_on_mean_v": 8.382782834814861e-05,
+      "proj_manifold_dist": 0.06585037708282471,
+      "proj_v_residual": 0.000597418169490993,
+      "proj_true_dist": 0.43755704164505005,
       "proj_steps": 29.0,
-      "pred_recall": 0.8148375984251969,
-      "pred_FPrate": 0.0,
-      "pred_precision": 0.7490234375,
-      "eval_eps_used": 0.010207049548625946,
-      "bidirectional_chamfer": 0.26658135652542114,
-      "gt_to_learned_mean": 0.04720383882522583,
-      "learned_to_gt_mean": 0.21937750279903412,
-      "gt_to_learned_p95": 0.09286653995513916,
-      "learned_to_gt_p95": 0.9824763536453247,
+      "pred_recall": 0.8260334645669292,
+      "pred_FPrate": 0.002686202686202686,
+      "pred_precision": 0.056884765625,
+      "eval_eps_used": 0.019285311922430992,
+      "bidirectional_chamfer": 0.0699271410703659,
+      "gt_to_learned_mean": 0.018137309700250626,
+      "learned_to_gt_mean": 0.05178982764482498,
+      "gt_to_learned_p95": 0.030938729643821716,
+      "learned_to_gt_p95": 0.25544893741607666,
       "n_gt": 8128.0,
       "n_learned": 4096.0,
-      "eps_stop": 0.010207049548625946,
-      "train_seconds": 124.23901285399916
+      "eps_stop": 0.019285311922430992,
+      "train_seconds": 154.14759217505343
     },
-    "eval_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_eval.json",
-    "ckpt_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_model.pt",
+    "eval_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_eval.json",
+    "ckpt_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_model.pt",
     "config": {
       "seed": 3,
       "device": "cuda",
@@ -2994,16 +2995,6 @@
       "codim_auto_k_neighbors": 16,
       "codim_auto_const_axis_std_ratio": 0.001,
       "codim_auto_strict_check": true,
-      "codim_learn_enable": false,
-      "codim_learn_m_max": 5,
-      "codim_learn_stage1_ratio": 0.1,
-      "codim_learn_sparsity_final": 0.0,
-      "codim_learn_gate_lr": 0.01,
-      "codim_learn_gate_threshold": 0.5,
-      "codim_learn_min_active": 1,
-      "codim_learn_min_active_weight": 1.0,
-      "codim_learn_stage1_lam_oncl": 0.01,
-      "codim_learn_finetune_ratio": 0.1,
       "show_3d_plot": true,
       "surface_plot_n": 28,
       "surface_eval_chunk": 8192,
@@ -3015,38 +3006,39 @@
       "train_log_every": 50
     },
     "loaded_config_paths": [
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/base.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/methods/oncl.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/method_dataset/oncl_6d_workspace_sine_surface_pose_traj.json"
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/base.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/methods/oncl.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/method_dataset/oncl_6d_workspace_sine_surface_pose_traj.json"
     ],
-    "seed": 3
+    "seed": 3,
+    "timestamp": "2026-04-16 10:35:15"
   },
   {
     "method": "oncl",
     "dataset": "6d_workspace_sine_surface_pose_traj",
     "metrics": {
-      "pred_on_mean_v": 7.537371402577264e-06,
-      "proj_manifold_dist": 0.052407264709472656,
-      "proj_v_residual": 0.001655925647355616,
-      "proj_true_dist": 0.316120445728302,
+      "pred_on_mean_v": 4.5045009755995125e-05,
+      "proj_manifold_dist": 0.07069581001996994,
+      "proj_v_residual": 0.0008118550758808851,
+      "proj_true_dist": 0.44878363609313965,
       "proj_steps": 29.0,
-      "pred_recall": 0.796998031496063,
-      "pred_FPrate": 0.0,
-      "pred_precision": 0.753662109375,
-      "eval_eps_used": 0.005483912769705057,
-      "bidirectional_chamfer": 0.2810130715370178,
-      "gt_to_learned_mean": 0.04742260277271271,
-      "learned_to_gt_mean": 0.2335904836654663,
-      "gt_to_learned_p95": 0.09280218183994293,
-      "learned_to_gt_p95": 0.9965682625770569,
+      "pred_recall": 0.7484005905511811,
+      "pred_FPrate": 0.00146484375,
+      "pred_precision": 0.09765625,
+      "eval_eps_used": 0.014530415646731853,
+      "bidirectional_chamfer": 0.0737151950597763,
+      "gt_to_learned_mean": 0.016990356147289276,
+      "learned_to_gt_mean": 0.05672483518719673,
+      "gt_to_learned_p95": 0.030284881591796875,
+      "learned_to_gt_p95": 0.28752660751342773,
       "n_gt": 8128.0,
       "n_learned": 4096.0,
-      "eps_stop": 0.005483912769705057,
-      "train_seconds": 125.88055645598797
+      "eps_stop": 0.014530415646731853,
+      "train_seconds": 160.1683423400391
     },
-    "eval_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_eval.json",
-    "ckpt_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_model.pt",
+    "eval_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_eval.json",
+    "ckpt_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_model.pt",
     "config": {
       "seed": 4,
       "device": "cuda",
@@ -3097,16 +3089,6 @@
       "codim_auto_k_neighbors": 16,
       "codim_auto_const_axis_std_ratio": 0.001,
       "codim_auto_strict_check": true,
-      "codim_learn_enable": false,
-      "codim_learn_m_max": 5,
-      "codim_learn_stage1_ratio": 0.1,
-      "codim_learn_sparsity_final": 0.0,
-      "codim_learn_gate_lr": 0.01,
-      "codim_learn_gate_threshold": 0.5,
-      "codim_learn_min_active": 1,
-      "codim_learn_min_active_weight": 1.0,
-      "codim_learn_stage1_lam_oncl": 0.01,
-      "codim_learn_finetune_ratio": 0.1,
       "show_3d_plot": true,
       "surface_plot_n": 28,
       "surface_eval_chunk": 8192,
@@ -3118,38 +3100,39 @@
       "train_log_every": 50
     },
     "loaded_config_paths": [
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/base.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/methods/oncl.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/method_dataset/oncl_6d_workspace_sine_surface_pose_traj.json"
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/base.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/methods/oncl.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/method_dataset/oncl_6d_workspace_sine_surface_pose_traj.json"
     ],
-    "seed": 4
+    "seed": 4,
+    "timestamp": "2026-04-16 10:37:56"
   },
   {
     "method": "oncl",
     "dataset": "6d_workspace_sine_surface_pose_traj",
     "metrics": {
-      "pred_on_mean_v": 2.3682325263507664e-05,
-      "proj_manifold_dist": 0.05089368298649788,
-      "proj_v_residual": 0.0017550260527059436,
-      "proj_true_dist": 0.31252390146255493,
+      "pred_on_mean_v": 6.073635086067952e-05,
+      "proj_manifold_dist": 0.09038940817117691,
+      "proj_v_residual": 0.002029246650636196,
+      "proj_true_dist": 0.45197421312332153,
       "proj_steps": 29.0,
-      "pred_recall": 0.9026820866141733,
-      "pred_FPrate": 0.0,
-      "pred_precision": 0.75732421875,
-      "eval_eps_used": 0.010032972320914268,
-      "bidirectional_chamfer": 0.271869033575058,
-      "gt_to_learned_mean": 0.04673626646399498,
-      "learned_to_gt_mean": 0.2251327782869339,
-      "gt_to_learned_p95": 0.09075216948986053,
-      "learned_to_gt_p95": 0.9942325353622437,
+      "pred_recall": 0.7481545275590551,
+      "pred_FPrate": 0.001220703125,
+      "pred_precision": 0.07568359375,
+      "eval_eps_used": 0.015748511999845505,
+      "bidirectional_chamfer": 0.07853392511606216,
+      "gt_to_learned_mean": 0.01767834462225437,
+      "learned_to_gt_mean": 0.06085558235645294,
+      "gt_to_learned_p95": 0.029868341982364655,
+      "learned_to_gt_p95": 0.3095299005508423,
       "n_gt": 8128.0,
       "n_learned": 4096.0,
-      "eps_stop": 0.010032972320914268,
-      "train_seconds": 125.86943490302656
+      "eps_stop": 0.015748511999845505,
+      "train_seconds": 134.74590384587646
     },
-    "eval_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_eval.json",
-    "ckpt_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_model.pt",
+    "eval_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_eval.json",
+    "ckpt_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_model.pt",
     "config": {
       "seed": 5,
       "device": "cuda",
@@ -3200,16 +3183,6 @@
       "codim_auto_k_neighbors": 16,
       "codim_auto_const_axis_std_ratio": 0.001,
       "codim_auto_strict_check": true,
-      "codim_learn_enable": false,
-      "codim_learn_m_max": 5,
-      "codim_learn_stage1_ratio": 0.1,
-      "codim_learn_sparsity_final": 0.0,
-      "codim_learn_gate_lr": 0.01,
-      "codim_learn_gate_threshold": 0.5,
-      "codim_learn_min_active": 1,
-      "codim_learn_min_active_weight": 1.0,
-      "codim_learn_stage1_lam_oncl": 0.01,
-      "codim_learn_finetune_ratio": 0.1,
       "show_3d_plot": true,
       "surface_plot_n": 28,
       "surface_eval_chunk": 8192,
@@ -3221,38 +3194,39 @@
       "train_log_every": 50
     },
     "loaded_config_paths": [
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/base.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/methods/oncl.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/method_dataset/oncl_6d_workspace_sine_surface_pose_traj.json"
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/base.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/methods/oncl.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/method_dataset/oncl_6d_workspace_sine_surface_pose_traj.json"
     ],
-    "seed": 5
+    "seed": 5,
+    "timestamp": "2026-04-16 10:40:12"
   },
   {
     "method": "oncl",
     "dataset": "6d_workspace_sine_surface_pose_traj",
     "metrics": {
-      "pred_on_mean_v": 1.557783252792433e-05,
-      "proj_manifold_dist": 0.09857907891273499,
-      "proj_v_residual": 0.0020719291642308235,
-      "proj_true_dist": 0.37234607338905334,
+      "pred_on_mean_v": 3.047324571525678e-05,
+      "proj_manifold_dist": 0.050793956965208054,
+      "proj_v_residual": 0.000664754246827215,
+      "proj_true_dist": 0.44915151596069336,
       "proj_steps": 29.0,
-      "pred_recall": 0.7092765748031497,
-      "pred_FPrate": 0.0,
-      "pred_precision": 0.66845703125,
-      "eval_eps_used": 0.00782964937388897,
-      "bidirectional_chamfer": 0.2894092798233032,
-      "gt_to_learned_mean": 0.04895886033773422,
-      "learned_to_gt_mean": 0.2404504120349884,
-      "gt_to_learned_p95": 0.09714753180742264,
-      "learned_to_gt_p95": 0.9459754228591919,
+      "pred_recall": 0.8169291338582677,
+      "pred_FPrate": 0.0009765625,
+      "pred_precision": 0.1884765625,
+      "eval_eps_used": 0.012460111640393734,
+      "bidirectional_chamfer": 0.0667760819196701,
+      "gt_to_learned_mean": 0.015596428886055946,
+      "learned_to_gt_mean": 0.05117965489625931,
+      "gt_to_learned_p95": 0.029204687103629112,
+      "learned_to_gt_p95": 0.27060097455978394,
       "n_gt": 8128.0,
       "n_learned": 4096.0,
-      "eps_stop": 0.00782964937388897,
-      "train_seconds": 125.33970693399897
+      "eps_stop": 0.012460111640393734,
+      "train_seconds": 149.49394019017927
     },
-    "eval_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_eval.json",
-    "ckpt_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_model.pt",
+    "eval_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_eval.json",
+    "ckpt_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_model.pt",
     "config": {
       "seed": 6,
       "device": "cuda",
@@ -3303,16 +3277,6 @@
       "codim_auto_k_neighbors": 16,
       "codim_auto_const_axis_std_ratio": 0.001,
       "codim_auto_strict_check": true,
-      "codim_learn_enable": false,
-      "codim_learn_m_max": 5,
-      "codim_learn_stage1_ratio": 0.1,
-      "codim_learn_sparsity_final": 0.0,
-      "codim_learn_gate_lr": 0.01,
-      "codim_learn_gate_threshold": 0.5,
-      "codim_learn_min_active": 1,
-      "codim_learn_min_active_weight": 1.0,
-      "codim_learn_stage1_lam_oncl": 0.01,
-      "codim_learn_finetune_ratio": 0.1,
       "show_3d_plot": true,
       "surface_plot_n": 28,
       "surface_eval_chunk": 8192,
@@ -3324,38 +3288,39 @@
       "train_log_every": 50
     },
     "loaded_config_paths": [
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/base.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/methods/oncl.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/method_dataset/oncl_6d_workspace_sine_surface_pose_traj.json"
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/base.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/methods/oncl.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/method_dataset/oncl_6d_workspace_sine_surface_pose_traj.json"
     ],
-    "seed": 6
+    "seed": 6,
+    "timestamp": "2026-04-16 10:42:43"
   },
   {
     "method": "ecomann",
     "dataset": "6d_workspace_sine_surface_pose_traj",
     "metrics": {
-      "pred_on_mean_v": 0.011668294668197632,
-      "proj_manifold_dist": 0.27297043800354004,
-      "proj_v_residual": 0.0761159136891365,
-      "proj_true_dist": 0.5086254477500916,
-      "proj_steps": 5.4267578125,
-      "pred_recall": 0.765871062992126,
-      "pred_FPrate": 0.012701514411333659,
-      "pred_precision": 0.005615234375,
-      "eval_eps_used": 0.19609397649765015,
-      "bidirectional_chamfer": 0.5157263278961182,
-      "gt_to_learned_mean": 0.10963667929172516,
-      "learned_to_gt_mean": 0.4060896635055542,
-      "gt_to_learned_p95": 0.1553768664598465,
-      "learned_to_gt_p95": 1.835648536682129,
+      "pred_on_mean_v": 0.0021121720783412457,
+      "proj_manifold_dist": 0.42711371183395386,
+      "proj_v_residual": 0.14709904789924622,
+      "proj_true_dist": 0.5769646167755127,
+      "proj_steps": 7.41455078125,
+      "pred_recall": 0.8074557086614174,
+      "pred_FPrate": 0.028076171875,
+      "pred_precision": 0.00244140625,
+      "eval_eps_used": 0.10122720152139664,
+      "bidirectional_chamfer": 0.31409451365470886,
+      "gt_to_learned_mean": 0.03660615533590317,
+      "learned_to_gt_mean": 0.2774883508682251,
+      "gt_to_learned_p95": 0.06233712658286095,
+      "learned_to_gt_p95": 1.0081526041030884,
       "n_gt": 8128.0,
       "n_learned": 4096.0,
-      "eps_stop": 0.19609397649765015,
-      "train_seconds": 1590.2167465729872
+      "eps_stop": 0.10122720152139664,
+      "train_seconds": 850.6363739720546
     },
-    "eval_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_eval.json",
-    "ckpt_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_model.pt",
+    "eval_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_eval.json",
+    "ckpt_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_model.pt",
     "config": {
       "seed": 0,
       "device": "cuda",
@@ -3368,7 +3333,7 @@
       ],
       "epochs": 20,
       "batch_size": 128,
-      "lr": 0.01,
+      "lr": 0.002,
       "weight_decay": 0.0,
       "use_batch_norm": true,
       "norm_level_clip_max": 300.0,
@@ -3380,7 +3345,7 @@
       "clean_aug_data": true,
       "siam_mode": "all",
       "n_normal_space_traversal": 3,
-      "n_local_neighborhood_mult": 1,
+      "n_local_neighborhood_mult": 1.25,
       "train_log_every": 5,
       "projector": {
         "alpha": 0.3,
@@ -3412,38 +3377,39 @@
       }
     },
     "loaded_config_paths": [
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/base.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/methods/ecomann.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/method_dataset/ecomann_6d_workspace_sine_surface_pose_traj.json"
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/base.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/methods/ecomann.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/method_dataset/ecomann_6d_workspace_sine_surface_pose_traj.json"
     ],
-    "seed": 0
+    "seed": 0,
+    "timestamp": "2026-04-16 10:57:33"
   },
   {
     "method": "ecomann",
     "dataset": "6d_workspace_sine_surface_pose_traj",
     "metrics": {
-      "pred_on_mean_v": 0.004241039045155048,
-      "proj_manifold_dist": 0.19647854566574097,
-      "proj_v_residual": 0.05483308807015419,
-      "proj_true_dist": 0.4533635079860687,
-      "proj_steps": 6.910400390625,
-      "pred_recall": 0.8111466535433071,
-      "pred_FPrate": 0.006591796875,
-      "pred_precision": 0.082763671875,
-      "eval_eps_used": 0.13670551776885986,
-      "bidirectional_chamfer": 0.4116678237915039,
-      "gt_to_learned_mean": 0.08067305386066437,
-      "learned_to_gt_mean": 0.33099478483200073,
-      "gt_to_learned_p95": 0.13053958117961884,
-      "learned_to_gt_p95": 1.3666141033172607,
+      "pred_on_mean_v": 0.0033072116784751415,
+      "proj_manifold_dist": 0.4393298625946045,
+      "proj_v_residual": 0.1827758252620697,
+      "proj_true_dist": 0.6058087944984436,
+      "proj_steps": 8.159912109375,
+      "pred_recall": 0.7856791338582677,
+      "pred_FPrate": 0.028076171875,
+      "pred_precision": 0.001220703125,
+      "eval_eps_used": 0.11533771455287933,
+      "bidirectional_chamfer": 0.28605085611343384,
+      "gt_to_learned_mean": 0.041237711906433105,
+      "learned_to_gt_mean": 0.24481312930583954,
+      "gt_to_learned_p95": 0.07563680410385132,
+      "learned_to_gt_p95": 0.7135289907455444,
       "n_gt": 8128.0,
       "n_learned": 4096.0,
-      "eps_stop": 0.13670551776885986,
-      "train_seconds": 1641.4489475170267
+      "eps_stop": 0.11533771455287933,
+      "train_seconds": 789.0601481928024
     },
-    "eval_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_eval.json",
-    "ckpt_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_model.pt",
+    "eval_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_eval.json",
+    "ckpt_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_model.pt",
     "config": {
       "seed": 1,
       "device": "cuda",
@@ -3456,7 +3422,7 @@
       ],
       "epochs": 20,
       "batch_size": 128,
-      "lr": 0.01,
+      "lr": 0.002,
       "weight_decay": 0.0,
       "use_batch_norm": true,
       "norm_level_clip_max": 300.0,
@@ -3468,7 +3434,7 @@
       "clean_aug_data": true,
       "siam_mode": "all",
       "n_normal_space_traversal": 3,
-      "n_local_neighborhood_mult": 1,
+      "n_local_neighborhood_mult": 1.25,
       "train_log_every": 5,
       "projector": {
         "alpha": 0.3,
@@ -3500,126 +3466,128 @@
       }
     },
     "loaded_config_paths": [
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/base.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/methods/ecomann.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/method_dataset/ecomann_6d_workspace_sine_surface_pose_traj.json"
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/base.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/methods/ecomann.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/method_dataset/ecomann_6d_workspace_sine_surface_pose_traj.json"
     ],
-    "seed": 1
+    "seed": 1,
+    "timestamp": "2026-04-16 11:11:17"
   },
   {
     "method": "ecomann",
     "dataset": "6d_workspace_sine_surface_pose_traj",
     "metrics": {
-      "pred_on_mean_v": 0.004131741356104612,
-      "proj_manifold_dist": 0.2711915373802185,
-      "proj_v_residual": 0.1165788397192955,
-      "proj_true_dist": 0.5485876798629761,
-      "proj_steps": 10.625732421875,
-      "pred_recall": 0.8089320866141733,
+      "pred_on_mean_v": 0.0047859251499176025,
+      "proj_manifold_dist": 0.30083101987838745,
+      "proj_v_residual": 0.10855787992477417,
+      "proj_true_dist": 0.48197874426841736,
+      "proj_steps": 6.354736328125,
+      "pred_recall": 0.8801673228346457,
+      "pred_FPrate": 0.05029296875,
+      "pred_precision": 0.000732421875,
+      "eval_eps_used": 0.14979678392410278,
+      "bidirectional_chamfer": 0.22094537317752838,
+      "gt_to_learned_mean": 0.038972899317741394,
+      "learned_to_gt_mean": 0.181972473859787,
+      "gt_to_learned_p95": 0.06215428188443184,
+      "learned_to_gt_p95": 0.6461790800094604,
+      "n_gt": 8128.0,
+      "n_learned": 4096.0,
+      "eps_stop": 0.14979678392410278,
+      "train_seconds": 847.8302607000805
+    },
+    "eval_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_eval.json",
+    "ckpt_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_model.pt",
+    "config": {
+      "seed": 2,
+      "device": "cuda",
+      "n_train": 4500,
+      "traj_gene_n_grid": 8192,
+      "hidden_sizes": [
+        128,
+        128,
+        128
+      ],
+      "epochs": 20,
+      "batch_size": 128,
+      "lr": 0.002,
+      "weight_decay": 0.0,
+      "use_batch_norm": true,
+      "norm_level_clip_max": 300.0,
+      "is_performing_data_augmentation": true,
+      "is_optimizing_local_tangent_space_alignment_loss": true,
+      "is_optimizing_signed_siamese_pairs": true,
+      "is_aligning_lpca_normal_space_eigvecs": true,
+      "is_augmenting_w_rand_comb_of_normaleigvecs": true,
+      "clean_aug_data": true,
+      "siam_mode": "all",
+      "n_normal_space_traversal": 3,
+      "n_local_neighborhood_mult": 1.25,
+      "train_log_every": 5,
+      "projector": {
+        "alpha": 0.3,
+        "steps": 80,
+        "min_steps": 20,
+        "tol": 5e-05
+      },
+      "planner": {
+        "enable": false,
+        "method": "traj_opt",
+        "steps": 64,
+        "opt_steps": 1240,
+        "opt_lr": 0.01,
+        "opt_lam_smooth": 0.2,
+        "lam_manifold": 1.0,
+        "lam_len_joint": 0.4,
+        "trust_scale": 0.8,
+        "off_dist": 0.6,
+        "pair_min_ratio": 0.15,
+        "pair_max_ratio": 0.35,
+        "pair_tries": 1200,
+        "init_mode": "joint_spline",
+        "joint_mid_noise": 0.0,
+        "anim_fps": 6,
+        "anim_stride": 1,
+        "save_gif": false,
+        "pybullet_render": false,
+        "pybullet_real_time_dt": 0.06
+      }
+    },
+    "loaded_config_paths": [
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/base.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/methods/ecomann.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/method_dataset/ecomann_6d_workspace_sine_surface_pose_traj.json"
+    ],
+    "seed": 2,
+    "timestamp": "2026-04-16 11:26:01"
+  },
+  {
+    "method": "ecomann",
+    "dataset": "6d_workspace_sine_surface_pose_traj",
+    "metrics": {
+      "pred_on_mean_v": 0.0007210799376480281,
+      "proj_manifold_dist": 0.1556583046913147,
+      "proj_v_residual": 0.037883467972278595,
+      "proj_true_dist": 0.36613693833351135,
+      "proj_steps": 4.637939453125,
+      "pred_recall": 0.7277312992125984,
       "pred_FPrate": 0.003907203907203907,
-      "pred_precision": 0.060791015625,
-      "eval_eps_used": 0.12904171645641327,
-      "bidirectional_chamfer": 0.47326144576072693,
-      "gt_to_learned_mean": 0.08174783736467361,
-      "learned_to_gt_mean": 0.3915136158466339,
-      "gt_to_learned_p95": 0.12276055663824081,
-      "learned_to_gt_p95": 2.018965005874634,
+      "pred_precision": 0.02294921875,
+      "eval_eps_used": 0.05503258854150772,
+      "bidirectional_chamfer": 0.12314505875110626,
+      "gt_to_learned_mean": 0.022228796035051346,
+      "learned_to_gt_mean": 0.10091626644134521,
+      "gt_to_learned_p95": 0.037909429520368576,
+      "learned_to_gt_p95": 0.45612090826034546,
       "n_gt": 8128.0,
       "n_learned": 4096.0,
-      "eps_stop": 0.12904171645641327,
-      "train_seconds": 1610.7266855299822
+      "eps_stop": 0.05503258854150772,
+      "train_seconds": 880.3525960990228
     },
-    "eval_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_eval.json",
-    "ckpt_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_model.pt",
-    "config": {
-      "seed": 2,
-      "device": "cuda",
-      "n_train": 4500,
-      "traj_gene_n_grid": 8192,
-      "hidden_sizes": [
-        128,
-        128,
-        128
-      ],
-      "epochs": 20,
-      "batch_size": 128,
-      "lr": 0.01,
-      "weight_decay": 0.0,
-      "use_batch_norm": true,
-      "norm_level_clip_max": 300.0,
-      "is_performing_data_augmentation": true,
-      "is_optimizing_local_tangent_space_alignment_loss": true,
-      "is_optimizing_signed_siamese_pairs": true,
-      "is_aligning_lpca_normal_space_eigvecs": true,
-      "is_augmenting_w_rand_comb_of_normaleigvecs": true,
-      "clean_aug_data": true,
-      "siam_mode": "all",
-      "n_normal_space_traversal": 3,
-      "n_local_neighborhood_mult": 1,
-      "train_log_every": 5,
-      "projector": {
-        "alpha": 0.3,
-        "steps": 80,
-        "min_steps": 20,
-        "tol": 5e-05
-      },
-      "planner": {
-        "enable": false,
-        "method": "traj_opt",
-        "steps": 64,
-        "opt_steps": 1240,
-        "opt_lr": 0.01,
-        "opt_lam_smooth": 0.2,
-        "lam_manifold": 1.0,
-        "lam_len_joint": 0.4,
-        "trust_scale": 0.8,
-        "off_dist": 0.6,
-        "pair_min_ratio": 0.15,
-        "pair_max_ratio": 0.35,
-        "pair_tries": 1200,
-        "init_mode": "joint_spline",
-        "joint_mid_noise": 0.0,
-        "anim_fps": 6,
-        "anim_stride": 1,
-        "save_gif": false,
-        "pybullet_render": false,
-        "pybullet_real_time_dt": 0.06
-      }
-    },
-    "loaded_config_paths": [
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/base.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/methods/ecomann.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/method_dataset/ecomann_6d_workspace_sine_surface_pose_traj.json"
-    ],
-    "seed": 2
-  },
-  {
-    "method": "ecomann",
-    "dataset": "6d_workspace_sine_surface_pose_traj",
-    "metrics": {
-      "pred_on_mean_v": 0.0038696620613336563,
-      "proj_manifold_dist": 0.223069429397583,
-      "proj_v_residual": 0.07597672194242477,
-      "proj_true_dist": 0.4965609312057495,
-      "proj_steps": 9.404052734375,
-      "pred_recall": 0.7242864173228346,
-      "pred_FPrate": 0.004151404151404151,
-      "pred_precision": 0.068359375,
-      "eval_eps_used": 0.12541483342647552,
-      "bidirectional_chamfer": 0.43566185235977173,
-      "gt_to_learned_mean": 0.0823839008808136,
-      "learned_to_gt_mean": 0.35327795147895813,
-      "gt_to_learned_p95": 0.12854507565498352,
-      "learned_to_gt_p95": 1.4815658330917358,
-      "n_gt": 8128.0,
-      "n_learned": 4096.0,
-      "eps_stop": 0.12541483342647552,
-      "train_seconds": 1665.4030747659854
-    },
-    "eval_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_eval.json",
-    "ckpt_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_model.pt",
+    "eval_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_eval.json",
+    "ckpt_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_model.pt",
     "config": {
       "seed": 3,
       "device": "cuda",
@@ -3632,7 +3600,7 @@
       ],
       "epochs": 20,
       "batch_size": 128,
-      "lr": 0.01,
+      "lr": 0.002,
       "weight_decay": 0.0,
       "use_batch_norm": true,
       "norm_level_clip_max": 300.0,
@@ -3644,7 +3612,7 @@
       "clean_aug_data": true,
       "siam_mode": "all",
       "n_normal_space_traversal": 3,
-      "n_local_neighborhood_mult": 1,
+      "n_local_neighborhood_mult": 1.25,
       "train_log_every": 5,
       "projector": {
         "alpha": 0.3,
@@ -3676,38 +3644,39 @@
       }
     },
     "loaded_config_paths": [
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/base.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/methods/ecomann.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/method_dataset/ecomann_6d_workspace_sine_surface_pose_traj.json"
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/base.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/methods/ecomann.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/method_dataset/ecomann_6d_workspace_sine_surface_pose_traj.json"
     ],
-    "seed": 3
+    "seed": 3,
+    "timestamp": "2026-04-16 11:41:01"
   },
   {
     "method": "ecomann",
     "dataset": "6d_workspace_sine_surface_pose_traj",
     "metrics": {
-      "pred_on_mean_v": 0.003912048414349556,
-      "proj_manifold_dist": 0.20780685544013977,
-      "proj_v_residual": 0.04967047646641731,
-      "proj_true_dist": 0.45120781660079956,
-      "proj_steps": 5.07177734375,
-      "pred_recall": 0.8040108267716536,
-      "pred_FPrate": 0.00634765625,
-      "pred_precision": 0.08544921875,
-      "eval_eps_used": 0.13327986001968384,
-      "bidirectional_chamfer": 0.4126473665237427,
-      "gt_to_learned_mean": 0.08249439299106598,
-      "learned_to_gt_mean": 0.3301529884338379,
-      "gt_to_learned_p95": 0.12739290297031403,
-      "learned_to_gt_p95": 1.3074569702148438,
+      "pred_on_mean_v": 0.0013955056201666594,
+      "proj_manifold_dist": 0.20724119246006012,
+      "proj_v_residual": 0.042402882128953934,
+      "proj_true_dist": 0.3958704173564911,
+      "proj_steps": 4.76123046875,
+      "pred_recall": 0.8197588582677166,
+      "pred_FPrate": 0.009521484375,
+      "pred_precision": 0.010498046875,
+      "eval_eps_used": 0.076874740421772,
+      "bidirectional_chamfer": 0.16439323127269745,
+      "gt_to_learned_mean": 0.027649546042084694,
+      "learned_to_gt_mean": 0.1367436796426773,
+      "gt_to_learned_p95": 0.04723850265145302,
+      "learned_to_gt_p95": 0.5545896291732788,
       "n_gt": 8128.0,
       "n_learned": 4096.0,
-      "eps_stop": 0.13327986001968384,
-      "train_seconds": 1633.648221133044
+      "eps_stop": 0.076874740421772,
+      "train_seconds": 766.153771129204
     },
-    "eval_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_eval.json",
-    "ckpt_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_model.pt",
+    "eval_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_eval.json",
+    "ckpt_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_model.pt",
     "config": {
       "seed": 4,
       "device": "cuda",
@@ -3720,7 +3689,7 @@
       ],
       "epochs": 20,
       "batch_size": 128,
-      "lr": 0.01,
+      "lr": 0.002,
       "weight_decay": 0.0,
       "use_batch_norm": true,
       "norm_level_clip_max": 300.0,
@@ -3732,7 +3701,7 @@
       "clean_aug_data": true,
       "siam_mode": "all",
       "n_normal_space_traversal": 3,
-      "n_local_neighborhood_mult": 1,
+      "n_local_neighborhood_mult": 1.25,
       "train_log_every": 5,
       "projector": {
         "alpha": 0.3,
@@ -3764,38 +3733,39 @@
       }
     },
     "loaded_config_paths": [
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/base.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/methods/ecomann.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/method_dataset/ecomann_6d_workspace_sine_surface_pose_traj.json"
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/base.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/methods/ecomann.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/method_dataset/ecomann_6d_workspace_sine_surface_pose_traj.json"
     ],
-    "seed": 4
+    "seed": 4,
+    "timestamp": "2026-04-16 11:54:08"
   },
   {
     "method": "ecomann",
     "dataset": "6d_workspace_sine_surface_pose_traj",
     "metrics": {
-      "pred_on_mean_v": 0.0031317740213125944,
-      "proj_manifold_dist": 0.22542275488376617,
-      "proj_v_residual": 0.05909125506877899,
-      "proj_true_dist": 0.4658747613430023,
-      "proj_steps": 4.912841796875,
-      "pred_recall": 0.7089074803149606,
-      "pred_FPrate": 0.004151404151404151,
-      "pred_precision": 0.082763671875,
-      "eval_eps_used": 0.11007804423570633,
-      "bidirectional_chamfer": 0.42969897389411926,
-      "gt_to_learned_mean": 0.07723301649093628,
-      "learned_to_gt_mean": 0.352465957403183,
-      "gt_to_learned_p95": 0.12001042813062668,
-      "learned_to_gt_p95": 1.5229970216751099,
+      "pred_on_mean_v": 0.0012169454712420702,
+      "proj_manifold_dist": 0.23012614250183105,
+      "proj_v_residual": 0.04213183373212814,
+      "proj_true_dist": 0.39314740896224976,
+      "proj_steps": 4.654541015625,
+      "pred_recall": 0.7332677165354331,
+      "pred_FPrate": 0.0087890625,
+      "pred_precision": 0.006591796875,
+      "eval_eps_used": 0.06692873686552048,
+      "bidirectional_chamfer": 0.18052633106708527,
+      "gt_to_learned_mean": 0.027797380462288857,
+      "learned_to_gt_mean": 0.15272894501686096,
+      "gt_to_learned_p95": 0.04686456173658371,
+      "learned_to_gt_p95": 0.6510229110717773,
       "n_gt": 8128.0,
       "n_learned": 4096.0,
-      "eps_stop": 0.11007804423570633,
-      "train_seconds": 1650.141135015001
+      "eps_stop": 0.06692873686552048,
+      "train_seconds": 780.4768411619589
     },
-    "eval_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_eval.json",
-    "ckpt_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_model.pt",
+    "eval_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_eval.json",
+    "ckpt_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_model.pt",
     "config": {
       "seed": 5,
       "device": "cuda",
@@ -3808,7 +3778,7 @@
       ],
       "epochs": 20,
       "batch_size": 128,
-      "lr": 0.01,
+      "lr": 0.002,
       "weight_decay": 0.0,
       "use_batch_norm": true,
       "norm_level_clip_max": 300.0,
@@ -3820,7 +3790,7 @@
       "clean_aug_data": true,
       "siam_mode": "all",
       "n_normal_space_traversal": 3,
-      "n_local_neighborhood_mult": 1,
+      "n_local_neighborhood_mult": 1.25,
       "train_log_every": 5,
       "projector": {
         "alpha": 0.3,
@@ -3852,38 +3822,39 @@
       }
     },
     "loaded_config_paths": [
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/base.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/methods/ecomann.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/method_dataset/ecomann_6d_workspace_sine_surface_pose_traj.json"
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/base.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/methods/ecomann.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/method_dataset/ecomann_6d_workspace_sine_surface_pose_traj.json"
     ],
-    "seed": 5
+    "seed": 5,
+    "timestamp": "2026-04-16 12:07:28"
   },
   {
     "method": "ecomann",
     "dataset": "6d_workspace_sine_surface_pose_traj",
     "metrics": {
-      "pred_on_mean_v": 0.003081335686147213,
-      "proj_manifold_dist": 0.2421787977218628,
-      "proj_v_residual": 0.08693011850118637,
-      "proj_true_dist": 0.5211132168769836,
-      "proj_steps": 5.72216796875,
-      "pred_recall": 0.7272391732283464,
-      "pred_FPrate": 0.00390625,
-      "pred_precision": 0.0966796875,
-      "eval_eps_used": 0.11238966882228851,
-      "bidirectional_chamfer": 0.47426706552505493,
-      "gt_to_learned_mean": 0.08069055527448654,
-      "learned_to_gt_mean": 0.3935765027999878,
-      "gt_to_learned_p95": 0.13243505358695984,
-      "learned_to_gt_p95": 1.8113821744918823,
+      "pred_on_mean_v": 0.001808324595913291,
+      "proj_manifold_dist": 0.21052145957946777,
+      "proj_v_residual": 0.040745314210653305,
+      "proj_true_dist": 0.38703903555870056,
+      "proj_steps": 5.63232421875,
+      "pred_recall": 0.7854330708661418,
+      "pred_FPrate": 0.0166015625,
+      "pred_precision": 0.00390625,
+      "eval_eps_used": 0.08408228307962418,
+      "bidirectional_chamfer": 0.15824902057647705,
+      "gt_to_learned_mean": 0.027982626110315323,
+      "learned_to_gt_mean": 0.13026639819145203,
+      "gt_to_learned_p95": 0.047004859894514084,
+      "learned_to_gt_p95": 0.5176613926887512,
       "n_gt": 8128.0,
       "n_learned": 4096.0,
-      "eps_stop": 0.11238966882228851,
-      "train_seconds": 1668.6683659219998
+      "eps_stop": 0.08408228307962418,
+      "train_seconds": 803.7601721419487
     },
-    "eval_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_eval.json",
-    "ckpt_path": "/home/baiyu/PycharmProjects/equality_manofld/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_model.pt",
+    "eval_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_eval.json",
+    "ckpt_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/ecomann/6d_workspace_sine_surface_pose_traj_ecomann_model.pt",
     "config": {
       "seed": 6,
       "device": "cuda",
@@ -3896,7 +3867,7 @@
       ],
       "epochs": 20,
       "batch_size": 128,
-      "lr": 0.01,
+      "lr": 0.002,
       "weight_decay": 0.0,
       "use_batch_norm": true,
       "norm_level_clip_max": 300.0,
@@ -3908,7 +3879,7 @@
       "clean_aug_data": true,
       "siam_mode": "all",
       "n_normal_space_traversal": 3,
-      "n_local_neighborhood_mult": 1,
+      "n_local_neighborhood_mult": 1.25,
       "train_log_every": 5,
       "projector": {
         "alpha": 0.3,
@@ -3940,11 +3911,12 @@
       }
     },
     "loaded_config_paths": [
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/base.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/methods/ecomann.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
-      "/home/baiyu/PycharmProjects/equality_manofld/configs/method_dataset/ecomann_6d_workspace_sine_surface_pose_traj.json"
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/base.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/methods/ecomann.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/datasets/6d_workspace_sine_surface_pose_traj.json",
+      "/home/baiyu/PycharmProjects/LearnEqConstraints/configs/method_dataset/ecomann_6d_workspace_sine_surface_pose_traj.json"
     ],
-    "seed": 6
+    "seed": 6,
+    "timestamp": "2026-04-16 12:21:16"
   }
 ]

@@ -34,6 +34,7 @@ from models.kinematics import (
     wrap_np_pi as _wrap_np_pi,
     wrap_workspace_pose_rpy_np as _wrap_workspace_pose_rpy_np,
 )
+from models.feature_normalizer import FeatureNormalizedModel, FeatureNormalizer
 from methods import dataaug as dataaug_method
 from methods import vae as vae_base
 from plotting import vae_plots as vae_plots
@@ -664,6 +665,25 @@ def _build_cfg_from_mapping_strict(cfg_cls: Any, mapping: dict[str, Any]) -> Any
     return cfg_cls(**kwargs)
 
 
+def _attach_extra_cfg_fields(cfg_obj: Any, mapping: dict[str, Any]) -> Any:
+    # Layered dataset configs may contain task-specific fields that are not part
+    # of the method dataclass. Preserve them on the runtime cfg object so
+    # resolve_dataset/evaluation/checkpoint export all see the same task params.
+    for key, value in mapping.items():
+        if not hasattr(cfg_obj, key):
+            setattr(cfg_obj, key, value)
+    return cfg_obj
+
+
+def _cfg_to_serializable_dict(cfg_obj: Any, mapping: dict[str, Any]) -> dict[str, Any]:
+    cfg_dict = dict(mapping)
+    cfg_dict.update(asdict(cfg_obj))
+    for key, value in vars(cfg_obj).items():
+        if key not in cfg_dict:
+            cfg_dict[key] = value
+    return cfg_dict
+
+
 def _resolve_run_config(
     method: str,
     dataset: str,
@@ -745,6 +765,7 @@ def run_oncl_one(
     force_single_output: bool = False,
 ) -> dict[str, Any]:
     cfg = _build_cfg_from_mapping_strict(ve.DemoCfg, cfg_mapping)
+    cfg = _attach_extra_cfg_fields(cfg, cfg_mapping)
     _apply_projector_subcfg(cfg)
     _apply_planner_subcfg(cfg)
     cfg.train_method_name = str(method_name)
@@ -993,6 +1014,7 @@ def run_oncl_one(
             eval_proj=eval_artifacts.get("proj", np.zeros((0, 6), dtype=np.float32)),
             out_path=out_pose,
             title=f"{dataset} ({method_name}): projected eval poses + orientation z-axis",
+            surface_cfg=cfg,
         )
         out_err = os.path.join(outdir, f"{dataset}_{method_tag}_workspace_pose_proj_error_distributions.png")
         _plot_workspace_pose_projection_error_distributions(
@@ -1000,6 +1022,7 @@ def run_oncl_one(
             x_after=eval_artifacts.get("proj", np.zeros((0, 6), dtype=np.float32)),
             out_path=out_err,
             title=f"{dataset} ({method_name}): projection errors before/after",
+            surface_cfg=cfg,
         )
     if str(dataset) in DUAL_ARM_12D_DATASETS:
         out_pose = os.path.join(outdir, f"{dataset}_{method_tag}_dual_arm_guided_insertion_orientation.png")
@@ -1008,6 +1031,7 @@ def run_oncl_one(
             eval_proj=eval_artifacts.get("proj", np.zeros((0, 12), dtype=np.float32)),
             out_path=out_pose,
             title=f"{dataset} ({method_name}): dual-arm guided insertion poses",
+            task_cfg=cfg,
         )
         out_err = os.path.join(outdir, f"{dataset}_{method_tag}_dual_arm_pose_proj_error_distributions.png")
         _plot_dual_arm_pose_projection_error_distributions(
@@ -1020,8 +1044,9 @@ def run_oncl_one(
             y_amp=float(getattr(cfg, "dual_arm_curve_y_amp", 0.55)),
             y_freq=float(getattr(cfg, "dual_arm_curve_y_freq", 1.0)),
             z_base=float(getattr(cfg, "dual_arm_curve_z_base", 0.2)),
-            z_amp=float(getattr(cfg, "dual_arm_curve_z_amp", 0.35)),
+            z_amp=float(getattr(cfg, "dual_arm_curve_z_amp", getattr(cfg, "dual_arm_vertical_half_range", 0.35))),
             z_freq=float(getattr(cfg, "dual_arm_curve_z_freq", 0.7)),
+            z_half_range=float(getattr(cfg, "dual_arm_vertical_half_range", getattr(cfg, "dual_arm_curve_z_amp", 0.35))),
         )
     if dataset in ARM_UP_6D_DATASETS:
         out_dist = os.path.join(outdir, f"{dataset}_{method_tag}_proj_value_distribution.png")
@@ -1043,6 +1068,7 @@ def run_oncl_one(
 
     eval_path = os.path.join(outdir, f"{dataset}_{method_tag}_eval.json")
     ckpt_path = os.path.join(outdir, f"{dataset}_{method_tag}_model.pt")
+    cfg_serial = _cfg_to_serializable_dict(cfg, cfg_mapping)
     with open(eval_path, "w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2, ensure_ascii=False)
     torch.save(
@@ -1056,7 +1082,7 @@ def run_oncl_one(
             "depth": int(cfg.depth),
             "x_train": x_train.astype(np.float32),
             "train_hist": train_hist,
-            "cfg": asdict(cfg),
+            "cfg": cfg_serial,
         },
         ckpt_path,
     )
@@ -1067,7 +1093,7 @@ def run_oncl_one(
         "metrics": _normalize_metrics(metrics),
         "eval_path": eval_path,
         "ckpt_path": ckpt_path,
-        "config": {**asdict(cfg), "constraint_dim": int(learned_codim)},
+        "config": {**cfg_serial, "constraint_dim": int(learned_codim)},
     }
 
 
@@ -1080,6 +1106,7 @@ def run_udf_one(
     cfg_mapping: dict[str, Any],
 ) -> dict[str, Any]:
     cfg = _build_cfg_from_mapping_strict(dataaug_method.Config, cfg_mapping)
+    cfg = _attach_extra_cfg_fields(cfg, cfg_mapping)
     _apply_projector_subcfg(cfg)
     _apply_planner_subcfg(cfg)
 
@@ -1105,14 +1132,26 @@ def run_udf_one(
     train_t0 = time.perf_counter()
 
     knn_k = dataaug_method.effective_knn_norm_estimation_points(cfg, len(x_train))
-    n_basis = dataaug_method.knn_normal_bases(x_train, knn_k, true_codim, cfg)
-    model, train_stats, train_history, train_artifacts = dataaug_method.train_baseline(
+    model, train_stats, train_history, train_artifacts = dataaug_method.train_baseline_with_optional_normalization(
         cfg,
         mode=method,
         x=x_train,
-        n_basis=n_basis,
+        true_codim=true_codim,
+        dataset_name=str(dataset),
+        knn_k=knn_k,
     )
     train_seconds = float(time.perf_counter() - train_t0)
+    feature_normalizer = train_artifacts.get("feature_normalizer", None)
+    eval_model: nn.Module = model
+    if getattr(feature_normalizer, "enabled", False):
+        eval_model = FeatureNormalizedModel(model, feature_normalizer).to(str(cfg.device))
+    n_basis = np.asarray(
+        train_artifacts.get(
+            "n_basis_plot",
+            np.zeros((len(x_train), x_train.shape[1], true_codim), dtype=np.float32),
+        ),
+        dtype=np.float32,
+    )
 
     if _is_arm_dataset(dataset):
         post_fn = _wrap_np_pi
@@ -1129,12 +1168,20 @@ def run_udf_one(
         )
     ) if (_is_arm_dataset(dataset) or _is_workspace_pose_dataset(dataset)) else None
 
-    project_fn = dataaug_method._make_project_fn(cfg)
+    project_fn_base = dataaug_method._make_project_fn(cfg)
+
+    def project_fn(_model: nn.Module, x0: np.ndarray, eps_stop: float) -> tuple[np.ndarray, np.ndarray]:
+        if getattr(feature_normalizer, "enabled", False):
+            x0_norm = feature_normalizer.transform(np.asarray(x0, dtype=np.float32))
+            proj_norm, steps = project_fn_base(model, x0_norm, eps_stop)
+            return feature_normalizer.inverse_transform(proj_norm), steps
+        return project_fn_base(_model, x0, eps_stop)
+
     metrics, eval_cfg, eval_artifacts = run_eval_metrics(
         cfg=cfg,
         method_key=method,
         dataset_name=dataset,
-        model=model,
+        model=eval_model,
         x_train=x_train,
         project_fn=project_fn,
         embed_fn=embed_fn,
@@ -1152,7 +1199,7 @@ def run_udf_one(
     _save_udf_plots(
         method=str(method),
         dataset=str(dataset),
-        model=model,
+        model=eval_model,
         x_train=x_train,
         grid=np.asarray(grid_vis, dtype=np.float32),
         cfg=cfg,
@@ -1168,7 +1215,7 @@ def run_udf_one(
         _save_common_method_plots(
             dataset=dataset,
             method_tag=str(method),
-            model=model,
+            model=eval_model,
             x_train=x_train,
             outdir=outdir,
             vis_cfg=vis_cfg,
@@ -1198,6 +1245,7 @@ def run_udf_one(
             eval_proj=eval_artifacts.get("proj", np.zeros((0, 6), dtype=np.float32)),
             out_path=out_pose,
             title=f"{dataset} ({method}): projected eval poses + orientation z-axis",
+            surface_cfg=cfg,
         )
         out_err = os.path.join(outdir, f"{dataset}_{method}_workspace_pose_proj_error_distributions.png")
         _plot_workspace_pose_projection_error_distributions(
@@ -1205,6 +1253,7 @@ def run_udf_one(
             x_after=eval_artifacts.get("proj", np.zeros((0, 6), dtype=np.float32)),
             out_path=out_err,
             title=f"{dataset} ({method}): projection errors before/after",
+            surface_cfg=cfg,
         )
     if str(dataset) in DUAL_ARM_12D_DATASETS:
         out_pose = os.path.join(outdir, f"{dataset}_{method}_dual_arm_guided_insertion_orientation.png")
@@ -1213,6 +1262,7 @@ def run_udf_one(
             eval_proj=eval_artifacts.get("proj", np.zeros((0, 12), dtype=np.float32)),
             out_path=out_pose,
             title=f"{dataset} ({method}): dual-arm guided insertion poses",
+            task_cfg=cfg,
         )
         out_err = os.path.join(outdir, f"{dataset}_{method}_dual_arm_pose_proj_error_distributions.png")
         _plot_dual_arm_pose_projection_error_distributions(
@@ -1225,8 +1275,9 @@ def run_udf_one(
             y_amp=float(getattr(cfg, "dual_arm_curve_y_amp", 0.55)),
             y_freq=float(getattr(cfg, "dual_arm_curve_y_freq", 1.0)),
             z_base=float(getattr(cfg, "dual_arm_curve_z_base", 0.2)),
-            z_amp=float(getattr(cfg, "dual_arm_curve_z_amp", 0.35)),
+            z_amp=float(getattr(cfg, "dual_arm_curve_z_amp", getattr(cfg, "dual_arm_vertical_half_range", 0.35))),
             z_freq=float(getattr(cfg, "dual_arm_curve_z_freq", 0.7)),
+            z_half_range=float(getattr(cfg, "dual_arm_vertical_half_range", getattr(cfg, "dual_arm_curve_z_amp", 0.35))),
         )
 
     eval_path = os.path.join(outdir, f"{dataset}_{method}_eval.json")
@@ -1234,6 +1285,7 @@ def run_udf_one(
 
     with open(eval_path, "w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2, ensure_ascii=False)
+    cfg_serial = _cfg_to_serializable_dict(cfg, cfg_mapping)
 
     torch.save(
         {
@@ -1241,11 +1293,19 @@ def run_udf_one(
             "method": str(method),
             "model_state": model.state_dict(),
             "in_dim": int(x_train.shape[1]),
+            "constraint_dim": 1,
             "hidden": int(cfg.hidden),
             "depth": int(cfg.depth),
+            "model_type": "feature_normalized_mlp" if getattr(feature_normalizer, "enabled", False) else "mlp",
+            "feature_normalizer": {
+                "enabled": bool(getattr(feature_normalizer, "enabled", False)),
+                "center": getattr(feature_normalizer, "center", np.zeros((x_train.shape[1],), dtype=np.float32)).tolist(),
+                "scale": getattr(feature_normalizer, "scale", np.ones((x_train.shape[1],), dtype=np.float32)).tolist(),
+                "angle_dims": list(getattr(feature_normalizer, "angle_dims", ())),
+            },
             "x_train": x_train,
             "train_stats": train_stats,
-            "cfg": asdict(cfg),
+            "cfg": cfg_serial,
         },
         ckpt_path,
     )
@@ -1256,7 +1316,7 @@ def run_udf_one(
         "metrics": _normalize_metrics(metrics),
         "eval_path": eval_path,
         "ckpt_path": ckpt_path,
-        "config": asdict(cfg),
+        "config": cfg_serial,
     }
 
 
@@ -1268,6 +1328,7 @@ def run_ecomann_one(
     cfg_mapping: dict[str, Any],
 ) -> dict[str, Any]:
     cfg = _build_cfg_from_mapping_strict(ecomann_base.Config, cfg_mapping)
+    cfg = _attach_extra_cfg_fields(cfg, cfg_mapping)
     _apply_projector_subcfg(cfg)
     _apply_planner_subcfg(cfg)
 
@@ -1287,14 +1348,29 @@ def run_ecomann_one(
     )
     x_train = ds["x_train"]
     true_codim = int(ds.get("true_codim", 1))
+    feature_normalizer = FeatureNormalizer.fit(x_train, dataset_name=str(dataset), enable=True)
+    x_train_model = feature_normalizer.transform(x_train) if feature_normalizer.enabled else x_train
+    if feature_normalizer.enabled:
+        denom = float(2 * (2 ** int(x_train_model.shape[1])))
+        max_mult = max(1e-6, float(max(2, len(x_train_model) - 2)) / max(denom, 1.0))
+        if float(cfg.n_local_neighborhood_mult) > max_mult:
+            print(
+                f"[ecomann-scale-inv] cap n_local_neighborhood_mult "
+                f"{float(cfg.n_local_neighborhood_mult):.6g}->{max_mult:.6g} "
+                f"for dataset={dataset}"
+            )
+            cfg.n_local_neighborhood_mult = float(max_mult)
     train_t0 = time.perf_counter()
     model, train_hist, learned_codim, loader_data = ecomann_base.train_ecomann(
         cfg,
-        x_train,
+        x_train_model,
         force_codim=true_codim,
         return_loader_data=True,
     )
     train_seconds = float(time.perf_counter() - train_t0)
+    eval_model: nn.Module = model
+    if feature_normalizer.enabled:
+        eval_model = FeatureNormalizedModel(model, feature_normalizer).to(str(cfg.device))
 
     if _is_arm_dataset(dataset):
         post_fn = _wrap_np_pi
@@ -1323,19 +1399,20 @@ def run_ecomann_one(
         diverge_ratio = float(p_cfg.get("diverge_ratio", 2.0))
         max_dq_norm = float(p_cfg.get("max_dq_norm", 1.0))
 
-        x_in = np.asarray(x0, dtype=np.float32)
+        x_in_raw = np.asarray(x0, dtype=np.float32)
+        x_in = feature_normalizer.transform(x_in_raw) if feature_normalizer.enabled else x_in_raw
         x_out = np.asarray(x_in, dtype=np.float32).copy()
         steps = np.zeros((len(x_out),), dtype=np.float32)
 
         for i in range(len(x_out)):
             q = x_out[i].astype(np.float64, copy=True)
-            y = np.asarray(_model.y(q), dtype=np.float64).reshape(-1)
+            y = np.asarray(model.y(q), dtype=np.float64).reshape(-1)
             y_norm = float(np.linalg.norm(y))
             y0 = float(diverge_ratio * y_norm)
             it = 0
             while (y_norm > tol) and (it < max_iter) and (y_norm < y0):
                 try:
-                    J = np.asarray(_model.J(q), dtype=np.float64)
+                    J = np.asarray(model.J(q), dtype=np.float64)
                     dq = np.linalg.lstsq(J, y, rcond=None)[0]
                     if np.isfinite(max_dq_norm) and max_dq_norm > 0.0:
                         dq_norm = float(np.linalg.norm(dq))
@@ -1344,18 +1421,20 @@ def run_ecomann_one(
                 except Exception:
                     break
                 q = q - (step_size * dq)
-                y = np.asarray(_model.y(q), dtype=np.float64).reshape(-1)
+                y = np.asarray(model.y(q), dtype=np.float64).reshape(-1)
                 y_norm = float(np.linalg.norm(y))
                 it += 1
             x_out[i] = q.astype(np.float32)
             steps[i] = float(it)
+        if feature_normalizer.enabled:
+            x_out = feature_normalizer.inverse_transform(x_out)
         return x_out.astype(np.float32), steps.astype(np.float32)
 
     metrics, eval_cfg, eval_artifacts = run_eval_metrics(
         cfg=cfg,
         method_key="ecomann",
         dataset_name=dataset,
-        model=model,
+        model=eval_model,
         x_train=x_train,
         project_fn=project_fn,
         embed_fn=embed_fn,
@@ -1370,7 +1449,7 @@ def run_ecomann_one(
     _save_common_method_plots(
         dataset=dataset,
         method_tag="ecomann",
-        model=model,
+        model=eval_model,
         x_train=x_train,
         outdir=outdir,
         vis_cfg=vis_cfg,
@@ -1416,6 +1495,7 @@ def run_ecomann_one(
             eval_proj=eval_artifacts.get("proj", np.zeros((0, 6), dtype=np.float32)),
             out_path=out_pose,
             title=f"{dataset} (ecomann): projected eval poses + orientation z-axis",
+            surface_cfg=cfg,
         )
         out_err = os.path.join(outdir, f"{dataset}_ecomann_workspace_pose_proj_error_distributions.png")
         _plot_workspace_pose_projection_error_distributions(
@@ -1423,6 +1503,7 @@ def run_ecomann_one(
             x_after=eval_artifacts.get("proj", np.zeros((0, 6), dtype=np.float32)),
             out_path=out_err,
             title=f"{dataset} (ecomann): projection errors before/after",
+            surface_cfg=cfg,
         )
     if str(dataset) in DUAL_ARM_12D_DATASETS:
         out_pose = os.path.join(outdir, f"{dataset}_ecomann_dual_arm_guided_insertion_orientation.png")
@@ -1431,6 +1512,7 @@ def run_ecomann_one(
             eval_proj=eval_artifacts.get("proj", np.zeros((0, 12), dtype=np.float32)),
             out_path=out_pose,
             title=f"{dataset} (ecomann): dual-arm guided insertion poses",
+            task_cfg=cfg,
         )
         out_err = os.path.join(outdir, f"{dataset}_ecomann_dual_arm_pose_proj_error_distributions.png")
         _plot_dual_arm_pose_projection_error_distributions(
@@ -1443,12 +1525,14 @@ def run_ecomann_one(
             y_amp=float(getattr(cfg, "dual_arm_curve_y_amp", 0.55)),
             y_freq=float(getattr(cfg, "dual_arm_curve_y_freq", 1.0)),
             z_base=float(getattr(cfg, "dual_arm_curve_z_base", 0.2)),
-            z_amp=float(getattr(cfg, "dual_arm_curve_z_amp", 0.35)),
+            z_amp=float(getattr(cfg, "dual_arm_curve_z_amp", getattr(cfg, "dual_arm_vertical_half_range", 0.35))),
             z_freq=float(getattr(cfg, "dual_arm_curve_z_freq", 0.7)),
+            z_half_range=float(getattr(cfg, "dual_arm_vertical_half_range", getattr(cfg, "dual_arm_curve_z_amp", 0.35))),
         )
 
     eval_path = os.path.join(outdir, f"{dataset}_ecomann_eval.json")
     ckpt_path = os.path.join(outdir, f"{dataset}_ecomann_model.pt")
+    cfg_serial = _cfg_to_serializable_dict(cfg, cfg_mapping)
     with open(eval_path, "w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2, ensure_ascii=False)
     torch.save(
@@ -1459,9 +1543,16 @@ def run_ecomann_one(
             "in_dim": int(x_train.shape[1]),
             "constraint_dim": int(learned_codim),
             "hidden_sizes": [int(v) for v in cfg.hidden_sizes],
+            "model_type": "feature_normalized_ecomann" if feature_normalizer.enabled else "ecomann",
+            "feature_normalizer": {
+                "enabled": bool(feature_normalizer.enabled),
+                "center": feature_normalizer.center.tolist(),
+                "scale": feature_normalizer.scale.tolist(),
+                "angle_dims": list(feature_normalizer.angle_dims),
+            },
             "x_train": x_train.astype(np.float32),
             "train_hist": train_hist,
-            "cfg": asdict(cfg),
+            "cfg": cfg_serial,
         },
         ckpt_path,
     )
@@ -1472,7 +1563,7 @@ def run_ecomann_one(
         "metrics": _normalize_metrics(metrics),
         "eval_path": eval_path,
         "ckpt_path": ckpt_path,
-        "config": asdict(cfg),
+        "config": cfg_serial,
     }
 
 
@@ -1555,6 +1646,7 @@ def run_vae_one(
     cfg_mapping: dict[str, Any],
 ) -> dict[str, Any]:
     cfg = _build_cfg_from_mapping_strict(VAEConfig, cfg_mapping)
+    cfg = _attach_extra_cfg_fields(cfg, cfg_mapping)
     _apply_projector_subcfg(cfg)
     _apply_planner_subcfg(cfg)
 
@@ -1942,6 +2034,7 @@ def run_vae_one(
             eval_proj=eval_artifacts.get("proj", np.zeros((0, 6), dtype=np.float32)),
             out_path=out_pose,
             title=f"{dataset} (vae): projected eval poses + orientation z-axis",
+            surface_cfg=cfg,
         )
         out_err = os.path.join(outdir, f"{dataset}_vae_workspace_pose_proj_error_distributions.png")
         _plot_workspace_pose_projection_error_distributions(
@@ -1949,6 +2042,7 @@ def run_vae_one(
             x_after=eval_artifacts.get("proj", np.zeros((0, 6), dtype=np.float32)),
             out_path=out_err,
             title=f"{dataset} (vae): projection errors before/after",
+            surface_cfg=cfg,
         )
     if str(dataset) in DUAL_ARM_12D_DATASETS:
         out_pose = os.path.join(outdir, f"{dataset}_vae_dual_arm_guided_insertion_orientation.png")
@@ -1957,6 +2051,7 @@ def run_vae_one(
             eval_proj=eval_artifacts.get("proj", np.zeros((0, 12), dtype=np.float32)),
             out_path=out_pose,
             title=f"{dataset} (vae): dual-arm guided insertion poses",
+            task_cfg=cfg,
         )
         out_err = os.path.join(outdir, f"{dataset}_vae_dual_arm_pose_proj_error_distributions.png")
         _plot_dual_arm_pose_projection_error_distributions(
@@ -1969,12 +2064,14 @@ def run_vae_one(
             y_amp=float(getattr(cfg, "dual_arm_curve_y_amp", 0.55)),
             y_freq=float(getattr(cfg, "dual_arm_curve_y_freq", 1.0)),
             z_base=float(getattr(cfg, "dual_arm_curve_z_base", 0.2)),
-            z_amp=float(getattr(cfg, "dual_arm_curve_z_amp", 0.35)),
+            z_amp=float(getattr(cfg, "dual_arm_curve_z_amp", getattr(cfg, "dual_arm_vertical_half_range", 0.35))),
             z_freq=float(getattr(cfg, "dual_arm_curve_z_freq", 0.7)),
+            z_half_range=float(getattr(cfg, "dual_arm_vertical_half_range", getattr(cfg, "dual_arm_curve_z_amp", 0.35))),
         )
 
     eval_path = os.path.join(outdir, f"{dataset}_vae_eval.json")
     ckpt_path = os.path.join(outdir, f"{dataset}_vae_model.pt")
+    cfg_serial = _cfg_to_serializable_dict(cfg, cfg_mapping)
 
     with open(eval_path, "w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2, ensure_ascii=False)
@@ -1988,7 +2085,7 @@ def run_vae_one(
             "latent_dim": latent_dim,
             "hidden_dims": hidden,
             "x_train": x_train,
-            "cfg": asdict(cfg),
+            "cfg": cfg_serial,
         },
         ckpt_path,
     )
@@ -1999,5 +2096,5 @@ def run_vae_one(
         "metrics": _normalize_metrics(metrics),
         "eval_path": eval_path,
         "ckpt_path": ckpt_path,
-        "config": asdict(cfg),
+        "config": cfg_serial,
     }

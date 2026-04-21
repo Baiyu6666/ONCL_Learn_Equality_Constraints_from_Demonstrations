@@ -75,8 +75,8 @@ Main entry:
 | `6d_spatial_arm_up_n6_py_traj` | 6 | 2 | `6DArmUp` | default paper variant | 6-DoF UR5-style arm upward-orientation set with trajectory-style sampling |
 | `6d_workspace_sine_surface_pose` | 6 | 3 |  | base version; paper uses `_traj` by default | Workspace pose `[x,y,z,roll,pitch,yaw]`: position on a sine-wave surface, local z-axis aligned with surface normal, free spin around that normal |
 | `6d_workspace_sine_surface_pose_traj` | 6 | 3 | `6DSinePose` | default paper variant | Sine-surface workspace-pose manifold with trajectory-style sampling |
-| `12d_dual_arm` | 12 | 10 |  | base version; paper uses `_traj` by default | Dual-arm guided-insertion pose `[pose1(6), pose2(6)]` |
-| `12d_dual_arm_traj` | 12 | 10 | `12DDualArm` | default paper variant | Dual-arm guided-insertion pose with trajectory-style sampling |
+| `12d_dual_arm` | 12 | 10 |  | base version; paper uses `_traj` by default | Dual-arm virtual-link pose `[pose1(6), pose2(6)]`: link center moves on a vertical ribbon from a planar guide curve |
+| `12d_dual_arm_traj` | 12 | 10 | `12DDualArm` | default paper variant | Dual-arm vertical-ribbon virtual-link pose with trajectory-style sampling |
 
 ## Derived Naming Rules
 

@@ -13,7 +13,7 @@ from matplotlib.ticker import MaxNLocator
 from torch import nn
 
 from evaluation.evaluator import DEFAULT_EVAL_CFG, eval_bounds_from_train
-from datasets.constraint_datasets import generate_dataset
+from datasets.constraint_datasets import generate_dataset, sine_surface_z_and_normal_from_xy
 from datasets.ur5_pybullet_utils import (
     UR5_LINK_LENGTHS,
     _make_pybullet_friendly_urdf,
@@ -557,6 +557,7 @@ def _plot_workspace_pose_orientation_3d(
     eval_proj: np.ndarray,
     out_path: str,
     title: str,
+    surface_cfg: Any | None = None,
 ) -> None:
     # eval_proj expected shape (N,6): [x,y,z,roll,pitch,yaw]
     if eval_proj is None or len(eval_proj) == 0 or eval_proj.shape[1] < 6:
@@ -568,14 +569,24 @@ def _plot_workspace_pose_orientation_3d(
     fig = plt.figure(figsize=(8.5, 7.0))
     ax = fig.add_subplot(111, projection="3d")
 
-    # Background wave surface for visual inspection.
-    xx, yy = np.meshgrid(np.linspace(-2.0, 2.0, 80), np.linspace(-2.0, 2.0, 80))
-    a1, a2 = 0.55, 0.35
-    fx, fy = 1.2, 1.0
-    zz = a1 * np.sin(fx * xx) + a2 * np.cos(fy * yy)
+    train_plot = x_train[:, :3] if x_train.shape[1] >= 3 else x_train
+    if len(train_plot) > 0:
+        xmin, xmax = float(np.min(train_plot[:, 0])), float(np.max(train_plot[:, 0]))
+        ymin, ymax = float(np.min(train_plot[:, 1])), float(np.max(train_plot[:, 1]))
+    else:
+        xmin = float(np.min(pts[:, 0]))
+        xmax = float(np.max(pts[:, 0]))
+        ymin = float(np.min(pts[:, 1]))
+        ymax = float(np.max(pts[:, 1]))
+    pad_x = max(0.05, 0.08 * max(xmax - xmin, 1e-3))
+    pad_y = max(0.05, 0.08 * max(ymax - ymin, 1e-3))
+    xx, yy = np.meshgrid(
+        np.linspace(xmin - pad_x, xmax + pad_x, 80),
+        np.linspace(ymin - pad_y, ymax + pad_y, 80),
+    )
+    zz, _ = sine_surface_z_and_normal_from_xy(xx, yy, cfg=surface_cfg)
     ax.plot_surface(xx, yy, zz, rstride=2, cstride=2, alpha=0.18, linewidth=0.0, color="#22d3ee")
 
-    train_plot = x_train[:, :3] if x_train.shape[1] >= 3 else x_train
     if len(train_plot) > 2500:
         idx = np.random.choice(len(train_plot), size=2500, replace=False)
         train_plot = train_plot[idx]
@@ -608,10 +619,12 @@ def _plot_workspace_pose_orientation_3d(
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_zlabel("z")
-    ax.set_xlim(-2.2, 2.2)
-    ax.set_ylim(-2.2, 2.2)
+    x_all = np.concatenate([pts[:, 0], xx.reshape(-1)], axis=0)
+    y_all = np.concatenate([pts[:, 1], yy.reshape(-1)], axis=0)
+    ax.set_xlim(float(np.min(x_all) - 0.03), float(np.max(x_all) + 0.03))
+    ax.set_ylim(float(np.min(y_all) - 0.03), float(np.max(y_all) + 0.03))
     z_all = np.concatenate([pts[:, 2], zz.reshape(-1)], axis=0)
-    pad = 0.2
+    pad = 0.03
     ax.set_zlim(float(np.min(z_all) - pad), float(np.max(z_all) + pad))
     ax.view_init(elev=24, azim=-52)
     ax.set_title(title)
@@ -621,23 +634,12 @@ def _plot_workspace_pose_orientation_3d(
     plt.close(fig)
 
 
-def _workspace_surface_z_and_normal_from_xy(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    # Wave surface used by 6d_workspace_sine_surface_pose.
-    a1, a2 = 0.55, 0.35
-    fx, fy = 1.2, 1.0
-    z = (a1 * np.sin(fx * x) + a2 * np.cos(fy * y)).astype(np.float32)
-    dzdx = a1 * fx * np.cos(fx * x)
-    dzdy = -a2 * fy * np.sin(fy * y)
-    n = np.stack([-dzdx, -dzdy, np.ones_like(dzdx)], axis=1).astype(np.float32)
-    n /= (np.linalg.norm(n, axis=1, keepdims=True) + 1e-12)
-    return z, n
-
-
 def _plot_workspace_pose_projection_error_distributions(
     x_before: np.ndarray,
     x_after: np.ndarray,
     out_path: str,
     title: str,
+    surface_cfg: Any | None = None,
 ) -> None:
     # Inputs expected shape (N,6): [x,y,z,roll,pitch,yaw].
     if (
@@ -659,8 +661,8 @@ def _plot_workspace_pose_projection_error_distributions(
     xb = xb[finite]
     xa = xa[finite]
 
-    zb_true, nb_true = _workspace_surface_z_and_normal_from_xy(xb[:, 0], xb[:, 1])
-    za_true, na_true = _workspace_surface_z_and_normal_from_xy(xa[:, 0], xa[:, 1])
+    zb_true, nb_true = sine_surface_z_and_normal_from_xy(xb[:, 0], xb[:, 1], cfg=surface_cfg)
+    za_true, na_true = sine_surface_z_and_normal_from_xy(xa[:, 0], xa[:, 1], cfg=surface_cfg)
     pos_err_before = np.abs(xb[:, 2] - zb_true)
     pos_err_after = np.abs(xa[:, 2] - za_true)
 
@@ -754,31 +756,25 @@ def _dual_arm_curve_center_tnb_from_s(
     z_amp: float,
     z_freq: float,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    del grasp_span, z_amp, z_freq
     ss = s.astype(np.float32)
     x = (float(x_span) * ss).astype(np.float32)
     y = (float(y_amp) * np.sin(float(y_freq) * np.pi * ss)).astype(np.float32)
-    z = (float(z_base) + float(z_amp) * np.cos(float(z_freq) * np.pi * ss)).astype(np.float32)
+    z = np.full_like(ss, float(z_base), dtype=np.float32)
     dx = np.full_like(ss, float(x_span), dtype=np.float32)
     dy = (float(y_amp) * float(y_freq) * np.pi * np.cos(float(y_freq) * np.pi * ss)).astype(np.float32)
-    dz = (-float(z_amp) * float(z_freq) * np.pi * np.sin(float(z_freq) * np.pi * ss)).astype(np.float32)
+    dz = np.zeros_like(ss, dtype=np.float32)
 
     center = np.stack([x, y, z], axis=1).astype(np.float32)
     tang = np.stack([dx, dy, dz], axis=1).astype(np.float32)
     tang /= (np.linalg.norm(tang, axis=1, keepdims=True) + 1e-12)
 
-    ref_up = np.tile(np.array([0.0, 0.0, 1.0], dtype=np.float32), (len(ss), 1))
-    alt_up = np.tile(np.array([0.0, 1.0, 0.0], dtype=np.float32), (len(ss), 1))
-    use_alt = np.abs(np.sum(tang * ref_up, axis=1)) > 0.95
-    ref = ref_up.copy()
-    ref[use_alt] = alt_up[use_alt]
-
-    normal = ref - np.sum(ref * tang, axis=1, keepdims=True) * tang
-    normal /= (np.linalg.norm(normal, axis=1, keepdims=True) + 1e-12)
-    binormal = np.cross(tang, normal).astype(np.float32)
-    binormal /= (np.linalg.norm(binormal, axis=1, keepdims=True) + 1e-12)
-    normal = np.cross(binormal, tang).astype(np.float32)
-    normal /= (np.linalg.norm(normal, axis=1, keepdims=True) + 1e-12)
-    return center.astype(np.float32), tang.astype(np.float32), normal.astype(np.float32), binormal.astype(np.float32)
+    z_axis = np.tile(np.array([0.0, 0.0, 1.0], dtype=np.float32), (len(ss), 1))
+    y_axis = np.cross(z_axis, tang).astype(np.float32)
+    y_axis /= (np.linalg.norm(y_axis, axis=1, keepdims=True) + 1e-12)
+    z_axis = np.cross(tang, y_axis).astype(np.float32)
+    z_axis /= (np.linalg.norm(z_axis, axis=1, keepdims=True) + 1e-12)
+    return center.astype(np.float32), tang.astype(np.float32), y_axis.astype(np.float32), z_axis.astype(np.float32)
 
 
 def _dual_arm_pose_analytic_target(
@@ -791,6 +787,7 @@ def _dual_arm_pose_analytic_target(
     z_base: float,
     z_amp: float,
     z_freq: float,
+    z_half_range: float | None = None,
 ) -> np.ndarray:
     xx = x.astype(np.float32)
     center_obs = (0.5 * (xx[:, 0:3] + xx[:, 6:9])).astype(np.float32)
@@ -805,10 +802,10 @@ def _dual_arm_pose_analytic_target(
         z_amp=z_amp,
         z_freq=z_freq,
     )
-    d2 = np.sum((center_obs[:, None, :] - center_grid[None, :, :]) ** 2, axis=2)
+    d2 = np.sum((center_obs[:, None, 0:2] - center_grid[None, :, 0:2]) ** 2, axis=2)
     s_star = s_grid[np.argmin(d2, axis=1)].astype(np.float32)
 
-    center, tang, normal, binormal = _dual_arm_curve_center_tnb_from_s(
+    center, tang, y_axis, z_axis = _dual_arm_curve_center_tnb_from_s(
         s_star,
         grasp_span=grasp_span,
         x_span=x_span,
@@ -818,21 +815,10 @@ def _dual_arm_pose_analytic_target(
         z_amp=z_amp,
         z_freq=z_freq,
     )
-    R_obs_1 = _rpy_zyx_to_rotmat_batch(xx[:, 3:6].astype(np.float32))
-    R_obs_2 = _rpy_zyx_to_rotmat_batch(xx[:, 9:12].astype(np.float32))
-    y_obs = (R_obs_1[:, :, 1] + R_obs_2[:, :, 1]).astype(np.float32)
-    y_obs /= (np.linalg.norm(y_obs, axis=1, keepdims=True) + 1e-12)
-    phi = np.arctan2(np.sum(y_obs * binormal, axis=1), np.sum(y_obs * normal, axis=1)).astype(np.float32)
-
-    c = np.cos(phi)[:, None].astype(np.float32)
-    s = np.sin(phi)[:, None].astype(np.float32)
-    y_axis = c * normal + s * binormal
-    z_axis = -s * normal + c * binormal
-    y_axis /= (np.linalg.norm(y_axis, axis=1, keepdims=True) + 1e-12)
-    z_axis = np.cross(tang, y_axis).astype(np.float32)
-    z_axis /= (np.linalg.norm(z_axis, axis=1, keepdims=True) + 1e-12)
-    y_axis = np.cross(z_axis, tang).astype(np.float32)
-    y_axis /= (np.linalg.norm(y_axis, axis=1, keepdims=True) + 1e-12)
+    if z_half_range is None:
+        z_half_range = float(z_amp)
+    u_star = np.clip(center_obs[:, 2] - float(z_base), -float(z_half_range), float(z_half_range))
+    center[:, 2] = float(z_base) + u_star.astype(np.float32)
 
     R = np.stack([tang, y_axis, z_axis], axis=2).astype(np.float32)
     sy = -np.clip(R[:, 2, 0], -1.0, 1.0)
@@ -852,6 +838,17 @@ def _dual_arm_pose_analytic_target(
     return np.concatenate([pose_1, pose_2], axis=1).astype(np.float32)
 
 
+def _dual_arm_pose_task_frame_embed(x: np.ndarray) -> np.ndarray:
+    xx = x.astype(np.float32, copy=False)
+
+    def _pose_embed(pose: np.ndarray) -> np.ndarray:
+        pos = pose[:, :3].astype(np.float32)
+        R = _rpy_zyx_to_rotmat_batch(pose[:, 3:6].astype(np.float32))
+        return np.concatenate([pos, R[:, :, 0], R[:, :, 1], R[:, :, 2]], axis=1).astype(np.float32)
+
+    return np.concatenate([_pose_embed(xx[:, :6]), _pose_embed(xx[:, 6:12])], axis=1).astype(np.float32)
+
+
 def _plot_dual_arm_pose_projection_error_distributions(
     x_before: np.ndarray,
     x_after: np.ndarray,
@@ -865,6 +862,7 @@ def _plot_dual_arm_pose_projection_error_distributions(
     z_base: float,
     z_amp: float,
     z_freq: float,
+    z_half_range: float | None = None,
 ) -> None:
     if (
         x_before is None
@@ -894,6 +892,7 @@ def _plot_dual_arm_pose_projection_error_distributions(
         z_base=z_base,
         z_amp=z_amp,
         z_freq=z_freq,
+        z_half_range=z_half_range,
     )
     ta = _dual_arm_pose_analytic_target(
         xa,
@@ -904,6 +903,7 @@ def _plot_dual_arm_pose_projection_error_distributions(
         z_base=z_base,
         z_amp=z_amp,
         z_freq=z_freq,
+        z_half_range=z_half_range,
     )
 
     pos_b1 = np.linalg.norm(xb[:, 0:3] - tb[:, 0:3], axis=1).astype(np.float32)
@@ -920,6 +920,15 @@ def _plot_dual_arm_pose_projection_error_distributions(
     ang_err_before = (0.5 * (ang_b1 + ang_b2)).astype(np.float32)
     ang_err_after = (0.5 * (ang_a1 + ang_a2)).astype(np.float32)
 
+    vec_err_before = np.linalg.norm(
+        _dual_arm_pose_task_frame_embed(xb) - _dual_arm_pose_task_frame_embed(tb),
+        axis=1,
+    ).astype(np.float32)
+    vec_err_after = np.linalg.norm(
+        _dual_arm_pose_task_frame_embed(xa) - _dual_arm_pose_task_frame_embed(ta),
+        axis=1,
+    ).astype(np.float32)
+
     pos_cap = float(np.percentile(np.concatenate([pos_err_before, pos_err_after], axis=0), 99))
     pos_cap = max(pos_cap, 1e-4)
     pos_bins = np.linspace(0.0, pos_cap, 50)
@@ -928,8 +937,12 @@ def _plot_dual_arm_pose_projection_error_distributions(
     ang_cap = max(ang_cap, 1.0)
     ang_bins = np.linspace(0.0, ang_cap, 50)
 
-    fig = plt.figure(figsize=(10.0, 4.2))
-    ax1 = fig.add_subplot(1, 2, 1)
+    vec_cap = float(np.percentile(np.concatenate([vec_err_before, vec_err_after], axis=0), 99))
+    vec_cap = max(vec_cap, 1e-4)
+    vec_bins = np.linspace(0.0, vec_cap, 50)
+
+    fig = plt.figure(figsize=(14.4, 4.2))
+    ax1 = fig.add_subplot(1, 3, 1)
     ax1.hist(pos_err_before, bins=pos_bins, color="#64748b", alpha=0.72, label="before")
     ax1.hist(pos_err_after, bins=pos_bins, color="#16a34a", alpha=0.58, label="after")
     ax1.set_xlabel("mean EE position error")
@@ -938,13 +951,21 @@ def _plot_dual_arm_pose_projection_error_distributions(
     ax1.grid(alpha=0.25)
     ax1.legend(loc="best", fontsize=8)
 
-    ax2 = fig.add_subplot(1, 2, 2)
+    ax2 = fig.add_subplot(1, 3, 2)
     ax2.hist(ang_err_before, bins=ang_bins, color="#64748b", alpha=0.72, label="before")
     ax2.hist(ang_err_after, bins=ang_bins, color="#16a34a", alpha=0.58, label="after")
     ax2.set_xlabel("mean EE orientation error (deg)")
     ax2.set_title("mean geodesic angle to true shared pose")
     ax2.grid(alpha=0.25)
     ax2.legend(loc="best", fontsize=8)
+
+    ax3 = fig.add_subplot(1, 3, 3)
+    ax3.hist(vec_err_before, bins=vec_bins, color="#64748b", alpha=0.72, label="before")
+    ax3.hist(vec_err_after, bins=vec_bins, color="#16a34a", alpha=0.58, label="after")
+    ax3.set_xlabel("analytic embedding L2 error")
+    ax3.set_title("evaluator-style vector distance")
+    ax3.grid(alpha=0.25)
+    ax3.legend(loc="best", fontsize=8)
 
     fig.suptitle(title)
     fig.tight_layout()
@@ -954,7 +975,8 @@ def _plot_dual_arm_pose_projection_error_distributions(
     print(
         "[dual_arm_pose_err] "
         f"pos_mean: {float(np.mean(pos_err_before)):.5f}->{float(np.mean(pos_err_after)):.5f}, "
-        f"ang_mean_deg: {float(np.mean(ang_err_before)):.3f}->{float(np.mean(ang_err_after)):.3f}"
+        f"ang_mean_deg: {float(np.mean(ang_err_before)):.3f}->{float(np.mean(ang_err_after)):.3f}, "
+        f"vec_mean: {float(np.mean(vec_err_before)):.5f}->{float(np.mean(vec_err_after)):.5f}"
     )
     print(f"saved: {out_path}")
 
@@ -964,20 +986,15 @@ def _plot_dual_arm_guided_insertion_orientation_3d(
     eval_proj: np.ndarray,
     out_path: str,
     title: str,
+    task_cfg: Any | None = None,
 ) -> None:
     if eval_proj is None or len(eval_proj) == 0 or eval_proj.shape[1] < 12:
         return
 
     xx = eval_proj.astype(np.float32, copy=False)
     p1 = xx[:, 0:3].astype(np.float32)
-    rpy1 = xx[:, 3:6].astype(np.float32)
     p2 = xx[:, 6:9].astype(np.float32)
-    rpy2 = xx[:, 9:12].astype(np.float32)
     center = (0.5 * (p1 + p2)).astype(np.float32)
-
-    x_axis_1 = _rpy_zyx_to_rotmat_batch(rpy1)[:, :, 0].astype(np.float32)
-    z_axis_1 = _rpy_zyx_to_local_z(rpy1[:, 0], rpy1[:, 1], rpy1[:, 2]).astype(np.float32)
-    x_axis_2 = _rpy_zyx_to_rotmat_batch(rpy2)[:, :, 0].astype(np.float32)
 
     fig = plt.figure(figsize=(9.2, 7.4))
     ax = fig.add_subplot(111, projection="3d")
@@ -1000,81 +1017,42 @@ def _plot_dual_arm_guided_insertion_orientation_3d(
     # eval_proj is an unordered projected sample cloud, so show it as scatter only.
     if len(center) > 1200:
         idx_eval = np.random.choice(len(center), size=1200, replace=False)
-        p1_s = p1[idx_eval]
-        p2_s = p2[idx_eval]
         center_s = center[idx_eval]
-        x1_s = x_axis_1[idx_eval]
-        x2_s = x_axis_2[idx_eval]
-        zc_s = z_axis_1[idx_eval]
     else:
-        p1_s = p1
-        p2_s = p2
         center_s = center
-        x1_s = x_axis_1
-        x2_s = x_axis_2
-        zc_s = z_axis_1
 
-    ax.scatter(p1_s[:, 0], p1_s[:, 1], p1_s[:, 2], s=8, c="#2563eb", alpha=0.38, label="arm1 projected")
-    ax.scatter(p2_s[:, 0], p2_s[:, 1], p2_s[:, 2], s=8, c="#dc2626", alpha=0.38, label="arm2 projected")
-    ax.scatter(center_s[:, 0], center_s[:, 1], center_s[:, 2], s=8, c="#111827", alpha=0.30, label="object projected")
+    ax.scatter(center_s[:, 0], center_s[:, 1], center_s[:, 2], s=9, c="#111827", alpha=0.36, label="projected centers")
 
-    # Overlay one true guided trajectory for interpretation.
+    # Overlay the current vertical-ribbon center manifold for interpretation.
     s_true = np.linspace(-1.0, 1.0, 240, dtype=np.float32)
-    center_true, tang_true, normal_true, binormal_true = _dual_arm_curve_center_tnb_from_s(
+    center_mid, tang_true, _y_true, z_true = _dual_arm_curve_center_tnb_from_s(
         s_true,
         grasp_span=1.0,
-        x_span=1.4,
-        y_amp=0.55,
-        y_freq=1.0,
-        z_base=0.2,
-        z_amp=0.35,
-        z_freq=0.7,
+        x_span=float(getattr(task_cfg, "dual_arm_curve_x_span", 0.45)),
+        y_amp=float(getattr(task_cfg, "dual_arm_curve_y_amp", 0.12)),
+        y_freq=float(getattr(task_cfg, "dual_arm_curve_y_freq", 1.0)),
+        z_base=float(getattr(task_cfg, "dual_arm_curve_z_base", 0.68)),
+        z_amp=float(getattr(task_cfg, "dual_arm_curve_z_amp", getattr(task_cfg, "dual_arm_vertical_half_range", 0.12))),
+        z_freq=float(getattr(task_cfg, "dual_arm_curve_z_freq", 0.7)),
     )
-    phi_true = 0.55 * np.pi * np.sin(0.9 * np.pi * s_true)
-    c = np.cos(phi_true)[:, None].astype(np.float32)
-    s = np.sin(phi_true)[:, None].astype(np.float32)
-    y_true = c * normal_true + s * binormal_true
-    y_true /= (np.linalg.norm(y_true, axis=1, keepdims=True) + 1e-12)
-    z_true = np.cross(tang_true, y_true).astype(np.float32)
-    z_true /= (np.linalg.norm(z_true, axis=1, keepdims=True) + 1e-12)
-    y_true = np.cross(z_true, tang_true).astype(np.float32)
-    y_true /= (np.linalg.norm(y_true, axis=1, keepdims=True) + 1e-12)
-    offset_true = 0.5 * tang_true
-    p1_true = (center_true - offset_true).astype(np.float32)
-    p2_true = (center_true + offset_true).astype(np.float32)
+    z_half_range = float(getattr(task_cfg, "dual_arm_vertical_half_range", getattr(task_cfg, "dual_arm_curve_z_amp", 0.12)))
+    center_low = center_mid.copy()
+    center_low[:, 2] = center_mid[:, 2] - z_half_range
+    center_high = center_mid.copy()
+    center_high[:, 2] = center_mid[:, 2] + z_half_range
 
-    ax.plot(center_true[:, 0], center_true[:, 1], center_true[:, 2], "--", color="#111827", lw=2.0, alpha=0.95, label="true object path")
-    ax.plot(p1_true[:, 0], p1_true[:, 1], p1_true[:, 2], "-", color="#2563eb", lw=2.0, alpha=0.95, label="true arm1 path")
-    ax.plot(p2_true[:, 0], p2_true[:, 1], p2_true[:, 2], "-", color="#dc2626", lw=2.0, alpha=0.95, label="true arm2 path")
+    ax.plot(center_mid[:, 0], center_mid[:, 1], center_mid[:, 2], "--", color="#0f172a", lw=2.0, alpha=0.95, label="centerline")
+    ax.plot(center_low[:, 0], center_low[:, 1], center_low[:, 2], "-", color="#64748b", lw=1.2, alpha=0.65, label="ribbon z bounds")
+    ax.plot(center_high[:, 0], center_high[:, 1], center_high[:, 2], "-", color="#64748b", lw=1.2, alpha=0.65)
 
-    true_idx = np.linspace(0, len(center_true) - 1, 14, dtype=int)
-    for i in true_idx:
-        ax.plot(
-            [p1_true[i, 0], p2_true[i, 0]],
-            [p1_true[i, 1], p2_true[i, 1]],
-            [p1_true[i, 2], p2_true[i, 2]],
-            color="#0f172a",
-            lw=1.0,
-            alpha=0.55,
-        )
-
+    true_idx = np.linspace(0, len(center_mid) - 1, 14, dtype=int)
     ax.quiver(
-        p1_true[true_idx, 0], p1_true[true_idx, 1], p1_true[true_idx, 2],
+        center_mid[true_idx, 0], center_mid[true_idx, 1], center_mid[true_idx, 2],
         tang_true[true_idx, 0], tang_true[true_idx, 1], tang_true[true_idx, 2],
-        length=0.20, normalize=True, color="#2563eb", linewidths=0.8, alpha=0.9,
-    )
-    ax.quiver(
-        p2_true[true_idx, 0], p2_true[true_idx, 1], p2_true[true_idx, 2],
-        tang_true[true_idx, 0], tang_true[true_idx, 1], tang_true[true_idx, 2],
-        length=0.20, normalize=True, color="#dc2626", linewidths=0.8, alpha=0.9,
-    )
-    ax.quiver(
-        center_true[true_idx, 0], center_true[true_idx, 1], center_true[true_idx, 2],
-        z_true[true_idx, 0], z_true[true_idx, 1], z_true[true_idx, 2],
-        length=0.24, normalize=True, color="#16a34a", linewidths=0.9, alpha=0.88,
+        length=0.08, normalize=True, color="#2563eb", linewidths=0.8, alpha=0.85,
     )
 
-    pts_all = np.concatenate([p1_s, p2_s, center_s, p1_true, p2_true, center_true], axis=0)
+    pts_all = np.concatenate([center_s, center_low, center_high, center_mid], axis=0)
     mins = np.min(pts_all, axis=0)
     maxs = np.max(pts_all, axis=0)
     span = np.maximum(maxs - mins, 1e-3)

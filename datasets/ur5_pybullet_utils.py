@@ -5,6 +5,7 @@ import math
 import re
 import tempfile
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
@@ -27,6 +28,13 @@ DEFAULT_UR5_RENDER_CFG = {
     "gripper_close_ratio": 0.78,
 }
 
+DEFAULT_DUAL_UR5_BASE_CFG = {
+    "dual_arm_left_base_xyz": [-0.24, -0.70, 0.0],
+    "dual_arm_left_base_rpy": [0.0, 0.0, math.pi / 2.0],
+    "dual_arm_right_base_xyz": [0.24, 0.70, 0.0],
+    "dual_arm_right_base_rpy": [0.0, 0.0, -math.pi / 2.0],
+}
+
 
 def resolve_ur5_kinematics_cfg(overrides: dict | None = None) -> dict:
     cfg = dict(DEFAULT_UR5_KINEMATICS_CFG)
@@ -39,6 +47,18 @@ def resolve_ur5_render_cfg(overrides: dict | None = None) -> dict:
     cfg = dict(DEFAULT_UR5_RENDER_CFG)
     if overrides:
         cfg.update({k: v for k, v in overrides.items() if k in cfg and v is not None})
+    return cfg
+
+
+def resolve_dual_ur5_base_cfg(overrides: Any | None = None) -> dict:
+    cfg = {k: list(v) for k, v in DEFAULT_DUAL_UR5_BASE_CFG.items()}
+    if overrides is None:
+        return cfg
+    src = overrides if isinstance(overrides, dict) else vars(overrides)
+    for k in cfg:
+        v = src.get(k, None)
+        if v is not None:
+            cfg[k] = [float(x) for x in v]
     return cfg
 
 
