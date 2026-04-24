@@ -121,26 +121,34 @@ def _right_task_grasp_flip_xyzw() -> np.ndarray:
 
 
 def _left_task_grasp_flip_xyzw() -> np.ndarray:
-    # Fixed 180deg flip about local tool-x, to bias the left gripper toward an
-    # overhand/top-down branch instead of the under-platform branch.
+    # Fixed 180deg flip about local tool-x to match this gripper's grasp frame
+    # to the task/object frame convention used in the dataset.
     return np.asarray([1.0, 0.0, 0.0, 0.0], dtype=np.float32)
 
 
-def _overhand_quat_xyzw(side: str) -> np.ndarray:
-    # Constant top-down task frame. For this gripper model, making the local
-    # y-axis point downward gives a clear overhand grasp while keeping IK feasible.
-    y_axis = np.asarray([0.0, 0.0, -1.0], dtype=np.float32)
-    if str(side).lower().startswith("r"):
-        x_axis = np.asarray([0.0, -1.0, 0.0], dtype=np.float32)
-    else:
-        x_axis = np.asarray([0.0, 1.0, 0.0], dtype=np.float32)
-    z_axis = np.cross(x_axis, y_axis).astype(np.float32)
-    z_axis /= max(float(np.linalg.norm(z_axis)), 1e-8)
-    x_axis = np.cross(y_axis, z_axis).astype(np.float32)
-    x_axis /= max(float(np.linalg.norm(x_axis)), 1e-8)
-    y_axis /= max(float(np.linalg.norm(y_axis)), 1e-8)
-    R = np.stack([x_axis, y_axis, z_axis], axis=1).astype(np.float64)
-    return _rpy_to_quat_xyzw(_rpy_from_rotmat_zyx(R))
+def _quat_from_local_x_rotation_xyzw(angle_rad: float) -> np.ndarray:
+    half = 0.5 * float(angle_rad)
+    return np.asarray([math.sin(half), 0.0, 0.0, math.cos(half)], dtype=np.float32)
+
+
+def _parse_rpy_deg_triplet(text: str) -> np.ndarray:
+    raw = str(text).strip()
+    if not raw:
+        return np.zeros((3,), dtype=np.float32)
+    vals = [float(v.strip()) for v in raw.split(",") if v.strip()]
+    if len(vals) != 3:
+        raise ValueError("task offset RPY must have three comma-separated values: roll,pitch,yaw")
+    return np.asarray(vals, dtype=np.float32)
+
+
+def _compose_task_local_offset_quat_xyzw(*, task_roll_rad: float, extra_rpy_rad: np.ndarray | None) -> np.ndarray:
+    quat = _quat_from_local_x_rotation_xyzw(float(task_roll_rad))
+    if extra_rpy_rad is not None:
+        extra = np.asarray(extra_rpy_rad, dtype=np.float32).reshape(-1)
+        if len(extra) >= 3 and float(np.linalg.norm(extra[:3])) > 1e-8:
+            quat = _quat_multiply_xyzw(quat, _rpy_to_quat_xyzw(extra[:3]))
+    quat /= max(float(np.linalg.norm(quat)), 1e-8)
+    return quat.astype(np.float32)
 
 
 def _quat_from_z_axis(axis: np.ndarray) -> np.ndarray:
@@ -705,7 +713,7 @@ class DualUR5DemoSim:
             self.p.GEOM_MESH,
             fileName=mesh_path,
             meshScale=[1.0, 1.0, 1.0],
-            rgbaColor=[0.78, 0.84, 0.90, 0.035],
+            rgbaColor=[0.74, 0.81, 0.88, 0.14],
             specularColor=[0.0, 0.0, 0.0],
             physicsClientId=self.client_id,
         )
@@ -743,6 +751,7 @@ class DualUR5DemoSim:
         pose: np.ndarray,
         *,
         orientation_mode: str,
+        task_offset_quat_xyzw: np.ndarray,
         side: str,
         max_iters: int,
         seed_offset: int,
@@ -750,9 +759,10 @@ class DualUR5DemoSim:
         p = self.p
         poses = np.asarray(pose, dtype=np.float32)
         mode = str(orientation_mode).strip().lower()
-        if mode not in ("none", "task", "overhand"):
+        if mode not in ("none", "task"):
             raise ValueError(f"unknown orientation_mode '{orientation_mode}'")
-        overhand_quat = _overhand_quat_xyzw(side)
+        task_offset_quat = np.asarray(task_offset_quat_xyzw, dtype=np.float32).reshape(4)
+        task_offset_quat /= max(float(np.linalg.norm(task_offset_quat)), 1e-8)
         q_prev = robot.home_q.copy()
         q_out = np.zeros((len(poses), 6), dtype=np.float32)
         pos_err = np.zeros((len(poses),), dtype=np.float32)
@@ -778,12 +788,11 @@ class DualUR5DemoSim:
             target_quat = None
             if mode == "task":
                 target_quat = _rpy_to_quat_xyzw(poses[i, 3:6])
+                target_quat = _quat_multiply_xyzw(target_quat, task_offset_quat)
                 if str(side).lower().startswith("r"):
                     target_quat = _quat_multiply_xyzw(target_quat, _right_task_grasp_flip_xyzw())
                 else:
                     target_quat = _quat_multiply_xyzw(target_quat, _left_task_grasp_flip_xyzw())
-            elif mode == "overhand":
-                target_quat = overhand_quat
             if target_quat is not None:
                 kwargs["targetOrientation"] = [float(v) for v in target_quat]
             sol = np.asarray(p.calculateInverseKinematics(**kwargs), dtype=np.float32).reshape(-1)
@@ -1006,10 +1015,12 @@ class DualUR5DemoSim:
         ee_r = np.zeros((n, 3), dtype=np.float32)
         ee_l_rpy = np.zeros((n, 3), dtype=np.float32)
         ee_r_rpy = np.zeros((n, 3), dtype=np.float32)
+        ee_l_quat = np.zeros((n, 4), dtype=np.float32)
+        ee_r_quat = np.zeros((n, 4), dtype=np.float32)
         prev_l: np.ndarray | None = None
         prev_r: np.ndarray | None = None
         prev_c: np.ndarray | None = None
-        trace_radius = float(max(0.0015, arm_trace_radius))
+        trace_radius = (None if float(arm_trace_radius) <= 0.0 else float(max(0.0015, arm_trace_radius)))
         object_radius = float(max(0.0015, object_trace_radius))
         snapshot_step_set = {int(v) for v in (snapshot_steps or []) if int(v) >= 0}
         snapshot_dir_abs = None
@@ -1035,24 +1046,27 @@ class DualUR5DemoSim:
             ee_r[i] = pos_r
             ee_l_rpy[i] = _quat_xyzw_to_rpy_zyx(self.p, quat_l)
             ee_r_rpy[i] = _quat_xyzw_to_rpy_zyx(self.p, quat_r)
+            ee_l_quat[i] = quat_l.astype(np.float32)
+            ee_r_quat[i] = quat_r.astype(np.float32)
             self._reset_or_create_virtual_links(pos_l, pos_r)
             if i % int(max(1, trace_stride)) == 0:
                 center = (0.5 * (pos_l + pos_r)).astype(np.float32)
                 if prev_l is not None:
-                    self._add_cylinder_segment(
-                        prev_l,
-                        pos_l,
-                        radius=trace_radius,
-                        rgba=(0.10, 0.62, 0.25, 0.94),
-                        body_list=self.trace_body_ids,
-                    )
-                    self._add_cylinder_segment(
-                        prev_r,
-                        pos_r,
-                        radius=trace_radius,
-                        rgba=(0.85, 0.23, 0.18, 0.94),
-                        body_list=self.trace_body_ids,
-                    )
+                    if trace_radius is not None:
+                        self._add_cylinder_segment(
+                            prev_l,
+                            pos_l,
+                            radius=trace_radius,
+                            rgba=(0.10, 0.62, 0.25, 0.94),
+                            body_list=self.trace_body_ids,
+                        )
+                        self._add_cylinder_segment(
+                            prev_r,
+                            pos_r,
+                            radius=trace_radius,
+                            rgba=(0.85, 0.23, 0.18, 0.94),
+                            body_list=self.trace_body_ids,
+                        )
                     if bool(draw_object_trace) and prev_c is not None:
                         self._add_cylinder_segment(
                             prev_c,
@@ -1084,6 +1098,8 @@ class DualUR5DemoSim:
             "ee_right": ee_r.astype(np.float32),
             "ee_left_rpy": ee_l_rpy.astype(np.float32),
             "ee_right_rpy": ee_r_rpy.astype(np.float32),
+            "ee_left_quat_xyzw": ee_l_quat.astype(np.float32),
+            "ee_right_quat_xyzw": ee_r_quat.astype(np.float32),
             "snapshot_paths": saved_snapshot_paths,
         }
 
@@ -1100,9 +1116,21 @@ def _parse_args() -> argparse.Namespace:
     ap.add_argument(
         "--orientation-mode",
         type=str,
-        default="overhand",
-        choices=("none", "task", "overhand"),
-        help="IK orientation target: none=position only, task=12D object frame, overhand=top-down grasp bias.",
+        default="task",
+        choices=("none", "task"),
+        help="IK orientation target: none=position only, task=planned task frame with optional fixed local roll bias.",
+    )
+    ap.add_argument(
+        "--task-roll-deg",
+        type=float,
+        default=0.0,
+        help="Fixed extra roll offset in degrees about the task-frame tangent axis when --orientation-mode=task.",
+    )
+    ap.add_argument(
+        "--task-offset-rpy-deg",
+        type=str,
+        default="0,0,90",
+        help="Extra fixed local task-frame RPY offset in degrees as roll,pitch,yaw. Applied after --task-roll-deg.",
     )
     ap.add_argument("--use-orientation", type=int, default=-1, help="legacy: 1 maps to --orientation-mode task")
     ap.add_argument("--ik-iters", type=int, default=160)
@@ -1130,6 +1158,11 @@ def main() -> None:
         orientation_mode = "task"
     elif int(args.use_orientation) == 0 and "--orientation-mode" not in sys.argv:
         orientation_mode = "none"
+    task_offset_rpy_deg = _parse_rpy_deg_triplet(str(args.task_offset_rpy_deg))
+    task_offset_quat = _compose_task_local_offset_quat_xyzw(
+        task_roll_rad=np.deg2rad(float(args.task_roll_deg)),
+        extra_rpy_rad=np.deg2rad(task_offset_rpy_deg.astype(np.float32)),
+    )
     base_cfg = resolve_dual_ur5_base_cfg(cfg)
     if str(args.planned_path_npz).strip():
         path = _load_planned_path_npz(_resolve_path(str(args.planned_path_npz)), str(args.planned_path_key))
@@ -1154,6 +1187,7 @@ def main() -> None:
             sim.left,
             path["pose_left"],
             orientation_mode=orientation_mode,
+            task_offset_quat_xyzw=task_offset_quat,
             side="left",
             max_iters=int(args.ik_iters),
             seed_offset=0,
@@ -1162,6 +1196,7 @@ def main() -> None:
             sim.right,
             path["pose_right"],
             orientation_mode=orientation_mode,
+            task_offset_quat_xyzw=task_offset_quat,
             side="right",
             max_iters=int(args.ik_iters),
             seed_offset=101,
@@ -1190,6 +1225,8 @@ def main() -> None:
         summary = {
             "seed": int(args.seed),
             "orientation_mode": orientation_mode,
+            "task_roll_deg": float(args.task_roll_deg),
+            "task_offset_rpy_deg": [float(v) for v in task_offset_rpy_deg.tolist()],
             "use_orientation": bool(orientation_mode != "none"),
             "sim_dt": float(args.sim_dt),
             "n_task_waypoints": int(args.n_steps),

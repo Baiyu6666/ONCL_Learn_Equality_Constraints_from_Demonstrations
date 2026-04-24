@@ -121,17 +121,47 @@ def _split_demo_segments(x_train: np.ndarray, cfg: SimpleNamespace) -> list[np.n
     return out
 
 
-def _select_segments(segments: list[np.ndarray], *, n_demos: int, selection: str) -> list[tuple[int, np.ndarray]]:
+def _select_segments(
+    segments: list[np.ndarray],
+    *,
+    n_demos: int,
+    selection: str,
+    start_index: int = 0,
+    explicit_indices: list[int] | None = None,
+    skip_indices: list[int] | None = None,
+) -> list[tuple[int, np.ndarray]]:
     if not segments:
         return []
+    skip_set = set()
+    if skip_indices is not None:
+        skip_set = {int(np.clip(int(v), 0, len(segments) - 1)) for v in skip_indices}
+    if explicit_indices is not None and len(explicit_indices) > 0:
+        idx: list[int] = []
+        seen: set[int] = set()
+        for v in explicit_indices:
+            i = int(np.clip(int(v), 0, len(segments) - 1))
+            if i not in seen and i not in skip_set:
+                idx.append(i)
+                seen.add(i)
+        return [(i, segments[i].astype(np.float32)) for i in idx]
     n = int(max(1, min(int(n_demos), len(segments))))
+    start = int(np.clip(int(start_index), 0, max(0, len(segments) - 1)))
     if selection == "first":
-        idx = list(range(n))
+        candidates = list(range(start, len(segments)))
     elif selection == "uniform":
-        idx = np.linspace(0, len(segments) - 1, num=n, dtype=np.int32).tolist()
-        idx = [int(v) for v in dict.fromkeys(idx)]
+        candidates = np.linspace(start, len(segments) - 1, num=max(n + len(skip_set), n), dtype=np.int32).tolist()
+        candidates = [int(v) for v in dict.fromkeys(candidates)]
     else:
-        idx = list(range(max(0, len(segments) - n), len(segments)))
+        candidates = list(range(len(segments) - 1, start - 1, -1))
+    idx = []
+    for i in candidates:
+        if i in skip_set:
+            continue
+        idx.append(int(i))
+        if len(idx) >= n:
+            break
+    if selection == "last":
+        idx = list(reversed(idx))
     return [(i, segments[i].astype(np.float32)) for i in idx]
 
 
@@ -387,9 +417,29 @@ def main() -> None:
         description="Fast PyBullet playback renderer for sine-pose demonstration trajectories."
     )
     parser.add_argument("--dataset-config", default=DEFAULT_DATASET_CONFIG, help="Dataset config JSON.")
-    parser.add_argument("--outdir", default="outputs/analysis/sinepose_demonstrations", help="Output directory.")
+    parser.add_argument(
+        "--outdir",
+        default="outputs/bench/paper_mix_2d_3d6d_traj_vs_nontraj_7seed/oncl/sinpose_demonstrations",
+        help="Output directory.",
+    )
     parser.add_argument("--seed", type=int, default=0, help="Dataset generation seed.")
     parser.add_argument("--n-demos", type=int, default=10, help="Number of demonstration trajectories to render.")
+    parser.add_argument(
+        "--demo-start-index",
+        type=int,
+        default=0,
+        help="Start demo index for contiguous selection modes.",
+    )
+    parser.add_argument(
+        "--demo-indices",
+        default="",
+        help="Comma-separated explicit demo indices to render; overrides selection/start-index/n-demos.",
+    )
+    parser.add_argument(
+        "--skip-demo-indices",
+        default="",
+        help="Comma-separated demo indices to exclude before selection; useful for skipping bad late demos while keeping later ones preferred.",
+    )
     parser.add_argument(
         "--selection",
         choices=["last", "first", "uniform"],
@@ -407,7 +457,7 @@ def main() -> None:
     parser.add_argument("--ik-ori-tol-deg", type=float, default=2.5, help="IK orientation tolerance in degrees.")
 
     parser.add_argument("--sim-dt", type=float, default=1.0 / 240.0, help="PyBullet simulation step.")
-    parser.add_argument("--play-fps", type=float, default=90.0, help="Playback FPS for direct demo frames.")
+    parser.add_argument("--play-fps", type=float, default=60.0, help="Playback FPS for direct demo frames.")
     parser.add_argument(
         "--playback-interp-steps",
         type=int,
@@ -459,7 +509,7 @@ def main() -> None:
     parser.add_argument("--gui", type=int, choices=[0, 1, 2], default=1, help="0: no video; 1: offscreen video; 2: GUI render only, no video logging.")
     parser.add_argument("--realtime", type=int, default=0, help="1 to sleep between sim steps.")
     parser.add_argument("--video-name", default="sinepose_demonstrations.mp4", help="Merged MP4 filename.")
-    parser.add_argument("--video-slowdown", type=float, default=0.5, help="Saved video slowdown; below 1 speeds playback up.")
+    parser.add_argument("--video-slowdown", type=float, default=1.0, help="Saved video slowdown; below 1 speeds playback up.")
     parser.add_argument("--video-width", type=int, default=1024, help="Video frame width.")
     parser.add_argument("--video-height", type=int, default=768, help="Video frame height.")
 
@@ -483,7 +533,16 @@ def main() -> None:
     demo_cfg = _load_demo_cfg(str(args.dataset_config), seed=int(args.seed))
     x_train, _grid = generate_dataset(DATASET_NAME, demo_cfg)
     segments = _split_demo_segments(x_train, demo_cfg)
-    selected = _select_segments(segments, n_demos=int(args.n_demos), selection=str(args.selection))
+    explicit_indices = [int(v.strip()) for v in str(args.demo_indices).split(",") if v.strip()] if str(args.demo_indices).strip() else None
+    skip_indices = [int(v.strip()) for v in str(args.skip_demo_indices).split(",") if v.strip()] if str(args.skip_demo_indices).strip() else None
+    selected = _select_segments(
+        segments,
+        n_demos=int(args.n_demos),
+        selection=str(args.selection),
+        start_index=int(args.demo_start_index),
+        explicit_indices=explicit_indices,
+        skip_indices=skip_indices,
+    )
     selected = [(i, _stride_demo(seg, int(args.demo_stride))) for i, seg in selected]
     if not selected:
         raise RuntimeError("no demonstration trajectories were selected")

@@ -68,11 +68,11 @@
         "render_frame_stride": 1,
         "trace_surface_clearance": 0.018,
         "trace_follow_surface": true,
-        "wall_seconds": 19.817166328430176,
-        "render_fps_wall": 3.8350588949222573,
-        "capture_seconds": 19.26205277442932,
-        "write_seconds": 0.38025593757629395,
-        "close_seconds": 0.06353950500488281
+        "wall_seconds": 20.04820728302002,
+        "render_fps_wall": 3.7908626405897534,
+        "capture_seconds": 19.241347074508667,
+        "write_seconds": 0.6313977241516113,
+        "close_seconds": 0.06354212760925293
       },
       "video_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/analysis/sinepose_demonstrations/sinepose_demonstrations_demo_01.mp4"
     },
@@ -110,11 +110,11 @@
         "render_frame_stride": 1,
         "trace_surface_clearance": 0.018,
         "trace_follow_surface": true,
-        "wall_seconds": 19.83538508415222,
-        "render_fps_wall": 3.8315364021201352,
-        "capture_seconds": 19.274993419647217,
-        "write_seconds": 0.38606882095336914,
-        "close_seconds": 0.06363701820373535
+        "wall_seconds": 20.674428462982178,
+        "render_fps_wall": 3.6760387420662655,
+        "capture_seconds": 19.521839141845703,
+        "write_seconds": 0.9746687412261963,
+        "close_seconds": 0.06359028816223145
       },
       "video_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/analysis/sinepose_demonstrations/sinepose_demonstrations_demo_02.mp4"
     },
@@ -152,11 +152,11 @@
         "render_frame_stride": 1,
         "trace_surface_clearance": 0.018,
         "trace_follow_surface": true,
-        "wall_seconds": 19.431793451309204,
-        "render_fps_wall": 3.9111160887148864,
-        "capture_seconds": 18.870275020599365,
-        "write_seconds": 0.38843369483947754,
-        "close_seconds": 0.06357645988464355
+        "wall_seconds": 20.15680742263794,
+        "render_fps_wall": 3.7704383638971044,
+        "capture_seconds": 19.312142372131348,
+        "write_seconds": 0.6658587455749512,
+        "close_seconds": 0.0635533332824707
       },
       "video_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/analysis/sinepose_demonstrations/sinepose_demonstrations_demo_03.mp4"
     },
@@ -194,11 +194,11 @@
         "render_frame_stride": 1,
         "trace_surface_clearance": 0.018,
         "trace_follow_surface": true,
-        "wall_seconds": 19.791923761367798,
-        "render_fps_wall": 3.839950118863419,
-        "capture_seconds": 19.224326610565186,
-        "write_seconds": 0.3935251235961914,
-        "close_seconds": 0.06364130973815918
+        "wall_seconds": 21.341485500335693,
+        "render_fps_wall": 3.5611391718165333,
+        "capture_seconds": 19.45433473587036,
+        "write_seconds": 1.7087390422821045,
+        "close_seconds": 0.06367826461791992
       },
       "video_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/analysis/sinepose_demonstrations/sinepose_demonstrations_demo_04.mp4"
     },
@@ -236,11 +236,11 @@
         "render_frame_stride": 1,
         "trace_surface_clearance": 0.018,
         "trace_follow_surface": true,
-        "wall_seconds": 19.74701690673828,
-        "render_fps_wall": 3.8486825812189633,
-        "capture_seconds": 19.18273425102234,
-        "write_seconds": 0.3905060291290283,
-        "close_seconds": 0.06354832649230957
+        "wall_seconds": 31.861557722091675,
+        "render_fps_wall": 2.3853196589727403,
+        "capture_seconds": 19.396120071411133,
+        "write_seconds": 12.284035682678223,
+        "close_seconds": 0.06379365921020508
       },
       "video_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/analysis/sinepose_demonstrations/sinepose_demonstrations_demo_05.mp4"
     },
@@ -278,11 +278,11 @@
         "render_frame_stride": 1,
         "trace_surface_clearance": 0.018,
         "trace_follow_surface": true,
-        "wall_seconds": 19.725292205810547,
-        "render_fps_wall": 3.852921376627943,
-        "capture_seconds": 19.16114616394043,
-        "write_seconds": 0.3887951374053955,
-        "close_seconds": 0.06364917755126953
+        "wall_seconds": 19.763221502304077,
+        "render_fps_wall": 3.8455269041608227,
+        "capture_seconds": 19.20591950416565,
+        "write_seconds": 0.37686991691589355,
+        "close_seconds": 0.06364178657531738
       },
       "video_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/analysis/sinepose_demonstrations/sinepose_demonstrations_demo_06.mp4"
     },
@@ -320,11 +320,11 @@
         "render_frame_stride": 1,
         "trace_surface_clearance": 0.018,
         "trace_follow_surface": true,
-        "wall_seconds": 19.743978261947632,
-        "render_fps_wall": 3.849274902539476,
-        "capture_seconds": 19.177383184432983,
-        "write_seconds": 0.39227938652038574,
-        "close_seconds": 0.0636136531829834
+        "wall_seconds": 21.65951895713806,
+        "render_fps_wall": 3.508849857210407,
+        "capture_seconds": 19.352367162704468,
+        "write_seconds": 2.128143787384033,
+        "close_seconds": 0.06357097625732422
       },
       "video_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/analysis/sinepose_demonstrations/sinepose_demonstrations_demo_07.mp4"
     }

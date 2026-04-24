@@ -24,14 +24,18 @@
   },
   "planned_constraint_error": {
     "mean_surface_pos_err": 0.004007265903055668,
+    "std_surface_pos_err": 0.0023627616465091705,
     "max_surface_pos_err": 0.009762167930603027,
     "mean_surface_ori_err_deg": 0.8329512476921082,
+    "std_surface_ori_err_deg": 0.5042729377746582,
     "max_surface_ori_err_deg": 2.1433842182159424
   },
   "executed_constraint_error": {
     "mean_surface_pos_err": 0.004046550951898098,
+    "std_surface_pos_err": 0.0021648250985890627,
     "max_surface_pos_err": 0.009070992469787598,
     "mean_surface_ori_err_deg": 0.8108555674552917,
+    "std_surface_ori_err_deg": 0.4433983862400055,
     "max_surface_ori_err_deg": 1.9427952766418457
   },
   "render": {
@@ -48,6 +52,7 @@
   },
   "outputs": {
     "video": null,
+    "error_video": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_mix_2d_3d6d_traj_vs_nontraj_7seed/oncl/sim_sine_pose_waypoints/sinepose_waypoints_ur5_tracking_errors.mp4",
     "tracking_overview_plot": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_mix_2d_3d6d_traj_vs_nontraj_7seed/oncl/sim_sine_pose_waypoints/sinepose_waypoints_tracking_overview.png",
     "distribution_plot": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_mix_2d_3d6d_traj_vs_nontraj_7seed/oncl/sim_sine_pose_waypoints/sinepose_waypoints_tracking_error_distribution_paper.png",
     "tracking_error_plot": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_mix_2d_3d6d_traj_vs_nontraj_7seed/oncl/sim_sine_pose_waypoints/sinepose_waypoints_ur5_tracking_errors.png",

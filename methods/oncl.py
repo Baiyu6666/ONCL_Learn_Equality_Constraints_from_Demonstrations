@@ -724,6 +724,7 @@ def run_dataset(name: str, cfg: DemoCfg, outdir: str) -> None:
             axis_labels=(axis_labels[0], axis_labels[1], axis_labels[2]),
             cfg=vis_cfg,
             intersection_points=eval_artifacts.get("proj", None),
+            dataset_name=str(name),
         )
         print(f"saved: {out_paper}")
     else:

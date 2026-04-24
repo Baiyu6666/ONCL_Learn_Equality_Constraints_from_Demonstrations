@@ -1,14 +1,16 @@
 {
   "task": "sinepose_ur5_tracking",
-  "ckpt": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_mix_2d_3d6d_traj_vs_nontraj_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_model.pt",
+  "ckpt": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_model.pt",
   "video_path": null,
+  "error_video_path": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_mix_2d_3d6d_traj_vs_nontraj_7seed/oncl/sim_sine_pose_obsavoid/sinepose_ur5_tracking_errors.mp4",
   "segment_video_paths": [],
+  "segment_error_video_paths": [],
   "error_plot": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_mix_2d_3d6d_traj_vs_nontraj_7seed/oncl/sim_sine_pose_obsavoid/sinepose_ur5_tracking_errors.png",
   "traj_plot": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_mix_2d_3d6d_traj_vs_nontraj_7seed/oncl/sim_sine_pose_obsavoid/sinepose_tracking_obstacle_planning.png",
   "distribution_plot": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_mix_2d_3d6d_traj_vs_nontraj_7seed/oncl/sim_sine_pose_obsavoid/6d_workspace_sine_surface_pose_traj_oncl_tracking_error_distribution_paper.png",
-  "planner_waypoints": 344,
-  "controller_samples": 3628,
-  "n_render_trajs": 4,
+  "planner_waypoints": 258,
+  "controller_samples": 2709,
+  "n_render_trajs": 3,
   "n_force_cross_trajs": 3,
   "environment": {
     "obstacle_center_xy": [
@@ -18,25 +20,27 @@
     "obstacle_radius": 0.054999999701976776
   },
   "ik": {
-    "mean_pos_err": 0.0013280749844852835,
-    "max_pos_err": 0.003968226257711649,
-    "mean_ori_err_deg": 0.1684902639075917,
-    "max_ori_err_deg": 1.6965916690744873,
+    "mean_pos_err": 0.0010669321442643802,
+    "max_pos_err": 0.0048627122305333614,
+    "mean_ori_err_deg": 10.537767494146113,
+    "max_ori_err_deg": 63.884924477096156,
     "mean_iters": 64.0
   },
   "tracking": {
-    "mean_joint_err_norm": 0.0018838644900824875,
-    "max_joint_err_norm": 0.005523116793483496,
-    "mean_pos_track_err": 0.013201008550822735,
-    "max_pos_track_err": 0.043163616210222244,
-    "mean_ori_track_err_deg": 3.296913802623749,
-    "max_ori_track_err_deg": 18.085968017578125
+    "mean_joint_err_norm": 0.0019266440067440271,
+    "max_joint_err_norm": 0.005886090453714132,
+    "mean_pos_track_err": 0.01603215839713812,
+    "max_pos_track_err": 0.04125097021460533,
+    "mean_ori_track_err_deg": 13.053623477617899,
+    "max_ori_track_err_deg": 63.88478469848633
   },
   "executed_constraint_error": {
-    "mean_surface_pos_err": 0.008081413805484772,
-    "max_surface_pos_err": 0.02523195743560791,
-    "mean_surface_ori_err_deg": 1.9417465925216675,
-    "max_surface_ori_err_deg": 4.853450775146484
+    "mean_surface_pos_err": 0.0042534698732197285,
+    "std_surface_pos_err": 0.0035068041179329157,
+    "max_surface_pos_err": 0.012067794799804688,
+    "mean_surface_ori_err_deg": 1.2590140104293823,
+    "std_surface_ori_err_deg": 1.2189631462097168,
+    "max_surface_ori_err_deg": 4.564028263092041
   },
   "controller_cfg": {
     "sim_dt": 0.004166666666666667,
@@ -54,7 +58,7 @@
     "draw_ref_trace": false,
     "trace_stride": 16,
     "trace_width": 3.0,
-    "video_slowdown": 1.5
+    "video_slowdown": 1.0
   },
   "ik_cfg": {
     "method": "pybullet",
@@ -78,38 +82,42 @@
       "segment_index": 1,
       "forced_cross_obstacle": true,
       "planner_waypoints": 86,
-      "controller_samples": 909,
-      "plan_seconds": 17.10024404525757,
-      "planner_min_obstacle_dist_xy": 0.015406675636768341,
+      "controller_samples": 903,
+      "plan_seconds": 16.051352739334106,
+      "planner_min_obstacle_dist_xy": 0.031975701451301575,
       "video_path": null,
       "ik": {
-        "first_pos_err": 0.0005558491102419794,
-        "first_ori_err_deg": 0.013619041188065045,
-        "mean_pos_err": 0.000815746549051255,
-        "max_pos_err": 0.003567103296518326,
-        "mean_ori_err_deg": 0.09987057914678349,
-        "max_ori_err_deg": 1.6965916690744873,
+        "first_pos_err": 0.0007732074591331184,
+        "first_ori_err_deg": 0.01414305893742851,
+        "mean_pos_err": 0.0006825103191658854,
+        "max_pos_err": 0.001097958069294691,
+        "mean_ori_err_deg": 0.014962548235697813,
+        "max_ori_err_deg": 0.02418251654263489,
         "mean_iters": 64.0
       },
       "tracking": {
-        "mean_joint_err_norm": 0.002402772195637226,
-        "max_joint_err_norm": 0.0047424607910215855,
-        "mean_pos_track_err": 0.010588825680315495,
-        "max_pos_track_err": 0.02040821872651577,
-        "mean_ori_track_err_deg": 5.5343732833862305,
-        "max_ori_track_err_deg": 13.90294075012207
+        "mean_joint_err_norm": 0.0023475985508412123,
+        "max_joint_err_norm": 0.005886090453714132,
+        "mean_pos_track_err": 0.016249369829893112,
+        "max_pos_track_err": 0.03964177146553993,
+        "mean_ori_track_err_deg": 4.8454694747924805,
+        "max_ori_track_err_deg": 13.961341857910156
       },
       "executed_constraint_error": {
-        "mean_surface_pos_err": 0.007315650582313538,
-        "max_surface_pos_err": 0.01757979393005371,
-        "mean_surface_ori_err_deg": 3.4547598361968994,
-        "max_surface_ori_err_deg": 4.853450775146484
+        "mean_surface_pos_err": 0.005403443239629269,
+        "std_surface_pos_err": 0.003949712496250868,
+        "max_surface_pos_err": 0.012067794799804688,
+        "mean_surface_ori_err_deg": 0.9617565870285034,
+        "std_surface_ori_err_deg": 0.8614037036895752,
+        "max_surface_ori_err_deg": 2.6460444927215576
       },
       "planned_constraint_error": {
-        "mean_surface_pos_err": 0.007518062833696604,
-        "max_surface_pos_err": 0.01685154438018799,
-        "mean_surface_ori_err_deg": 3.83451771736145,
-        "max_surface_ori_err_deg": 4.829617500305176
+        "mean_surface_pos_err": 0.0058529251255095005,
+        "std_surface_pos_err": 0.003329229075461626,
+        "max_surface_pos_err": 0.011385083198547363,
+        "mean_surface_ori_err_deg": 1.0628036260604858,
+        "std_surface_ori_err_deg": 0.8826301097869873,
+        "max_surface_ori_err_deg": 2.6657960414886475
       }
     },
     {
@@ -117,113 +125,83 @@
       "forced_cross_obstacle": true,
       "planner_waypoints": 86,
       "controller_samples": 901,
-      "plan_seconds": 14.551865577697754,
-      "planner_min_obstacle_dist_xy": 0.01602078229188919,
+      "plan_seconds": 15.136576890945435,
+      "planner_min_obstacle_dist_xy": 0.06572593748569489,
       "video_path": null,
       "ik": {
-        "first_pos_err": 0.0011382113443687558,
-        "first_ori_err_deg": 0.01917858588754066,
-        "mean_pos_err": 0.002525563584640622,
-        "max_pos_err": 0.003968226257711649,
-        "mean_ori_err_deg": 0.5085418947358581,
-        "max_ori_err_deg": 1.138687090072448,
+        "first_pos_err": 0.0008545457967557013,
+        "first_ori_err_deg": 9.81425612970901,
+        "mean_pos_err": 0.0017102307174354792,
+        "max_pos_err": 0.0048627122305333614,
+        "mean_ori_err_deg": 31.583173797637897,
+        "max_ori_err_deg": 63.884924477096156,
         "mean_iters": 64.0
       },
       "tracking": {
-        "mean_joint_err_norm": 0.001715389546006918,
-        "max_joint_err_norm": 0.004366896115243435,
-        "mean_pos_track_err": 0.01337271835654974,
-        "max_pos_track_err": 0.043163616210222244,
-        "mean_ori_track_err_deg": 2.0079944133758545,
-        "max_ori_track_err_deg": 4.131844997406006
+        "mean_joint_err_norm": 0.001384250121191144,
+        "max_joint_err_norm": 0.004649866372346878,
+        "mean_pos_track_err": 0.014932404272258282,
+        "max_pos_track_err": 0.04125097021460533,
+        "mean_ori_track_err_deg": 32.449119567871094,
+        "max_ori_track_err_deg": 63.88478469848633
       },
       "executed_constraint_error": {
-        "mean_surface_pos_err": 0.0034127908293157816,
-        "max_surface_pos_err": 0.009726762771606445,
-        "mean_surface_ori_err_deg": 1.1873224973678589,
-        "max_surface_ori_err_deg": 1.8516061305999756
+        "mean_surface_pos_err": 0.004205199424177408,
+        "std_surface_pos_err": 0.0033791325986385345,
+        "max_surface_pos_err": 0.010585427284240723,
+        "mean_surface_ori_err_deg": 0.60624760389328,
+        "std_surface_ori_err_deg": 0.33351969718933105,
+        "max_surface_ori_err_deg": 1.0903805494308472
       },
       "planned_constraint_error": {
-        "mean_surface_pos_err": 0.003798091085627675,
-        "max_surface_pos_err": 0.012414813041687012,
-        "mean_surface_ori_err_deg": 1.3573071956634521,
-        "max_surface_ori_err_deg": 2.01324200630188
+        "mean_surface_pos_err": 0.0038183205761015415,
+        "std_surface_pos_err": 0.0030594347044825554,
+        "max_surface_pos_err": 0.009300589561462402,
+        "mean_surface_ori_err_deg": 0.7512407302856445,
+        "std_surface_ori_err_deg": 0.39723676443099976,
+        "max_surface_ori_err_deg": 1.2955821752548218
       }
     },
     {
       "segment_index": 3,
       "forced_cross_obstacle": true,
       "planner_waypoints": 86,
-      "controller_samples": 901,
-      "plan_seconds": 15.118673086166382,
-      "planner_min_obstacle_dist_xy": 0.018546760082244873,
+      "controller_samples": 905,
+      "plan_seconds": 15.114317417144775,
+      "planner_min_obstacle_dist_xy": 0.016230426728725433,
       "video_path": null,
       "ik": {
-        "first_pos_err": 0.000970110238995403,
-        "first_ori_err_deg": 0.019081514158499166,
-        "mean_pos_err": 0.0008596123079769313,
-        "max_pos_err": 0.0013317473931238055,
-        "mean_ori_err_deg": 0.013556114568530332,
-        "max_ori_err_deg": 0.019081514158499166,
+        "first_pos_err": 0.0008807766134850681,
+        "first_ori_err_deg": 0.013250263499973922,
+        "mean_pos_err": 0.0008080553961917758,
+        "max_pos_err": 0.001184622524306178,
+        "mean_ori_err_deg": 0.015166136564742456,
+        "max_ori_err_deg": 0.024368961030161732,
         "mean_iters": 64.0
       },
       "tracking": {
-        "mean_joint_err_norm": 0.0023644508328288794,
-        "max_joint_err_norm": 0.004917606711387634,
-        "mean_pos_track_err": 0.017679471522569656,
-        "max_pos_track_err": 0.04158557578921318,
-        "mean_ori_track_err_deg": 4.140085697174072,
-        "max_ori_track_err_deg": 18.085968017578125
+        "mean_joint_err_norm": 0.002048083348199725,
+        "max_joint_err_norm": 0.004847812931984663,
+        "mean_pos_track_err": 0.016914701089262962,
+        "max_pos_track_err": 0.032972551882267,
+        "mean_ori_track_err_deg": 1.8662813901901245,
+        "max_ori_track_err_deg": 4.341931343078613
       },
       "executed_constraint_error": {
-        "mean_surface_pos_err": 0.006226638797670603,
-        "max_surface_pos_err": 0.014560818672180176,
-        "mean_surface_ori_err_deg": 1.3151112794876099,
-        "max_surface_ori_err_deg": 3.5210325717926025
+        "mean_surface_pos_err": 0.0031540950294584036,
+        "std_surface_pos_err": 0.00271057290956378,
+        "max_surface_pos_err": 0.011320352554321289,
+        "mean_surface_ori_err_deg": 2.2054953575134277,
+        "std_surface_ori_err_deg": 1.4793334007263184,
+        "max_surface_ori_err_deg": 4.564028263092041
       },
       "planned_constraint_error": {
-        "mean_surface_pos_err": 0.006733025424182415,
-        "max_surface_pos_err": 0.013890266418457031,
-        "mean_surface_ori_err_deg": 1.3695988655090332,
-        "max_surface_ori_err_deg": 3.249199151992798
-      }
-    },
-    {
-      "segment_index": 4,
-      "forced_cross_obstacle": false,
-      "planner_waypoints": 86,
-      "controller_samples": 917,
-      "plan_seconds": 1.8767788410186768,
-      "planner_min_obstacle_dist_xy": 0.026068083941936493,
-      "video_path": null,
-      "ik": {
-        "first_pos_err": 0.0010323995957151055,
-        "first_ori_err_deg": 0.014374444935775915,
-        "mean_pos_err": 0.0011113774962723255,
-        "max_pos_err": 0.0035781958140432835,
-        "mean_ori_err_deg": 0.051992467179194875,
-        "max_ori_err_deg": 0.8177406631200742,
-        "mean_iters": 64.0
-      },
-      "tracking": {
-        "mean_joint_err_norm": 0.0010528453858569264,
-        "max_joint_err_norm": 0.005523116793483496,
-        "mean_pos_track_err": 0.011163018643856049,
-        "max_pos_track_err": 0.03149117901921272,
-        "mean_ori_track_err_deg": 1.505201816558838,
-        "max_ori_track_err_deg": 6.960968971252441
-      },
-      "executed_constraint_error": {
-        "mean_surface_pos_err": 0.015250071883201599,
-        "max_surface_pos_err": 0.02523195743560791,
-        "mean_surface_ori_err_deg": 1.798895239830017,
-        "max_surface_ori_err_deg": 3.8460853099823
-      },
-      "planned_constraint_error": {
-        "mean_surface_pos_err": 0.01585122011601925,
-        "max_surface_pos_err": 0.024890422821044922,
-        "mean_surface_ori_err_deg": 1.994247555732727,
-        "max_surface_ori_err_deg": 3.915966749191284
+        "mean_surface_pos_err": 0.003684078576043248,
+        "std_surface_pos_err": 0.0026692617684602737,
+        "max_surface_pos_err": 0.011403322219848633,
+        "mean_surface_ori_err_deg": 2.5634829998016357,
+        "std_surface_ori_err_deg": 1.3729134798049927,
+        "max_surface_ori_err_deg": 4.6931891441345215
       }
     }
   ]

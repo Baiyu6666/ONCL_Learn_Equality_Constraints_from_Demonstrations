@@ -1,21 +1,10 @@
-python analyze/sim_sine_pose_obsavoid.py --init-mode nearest_demo  --seed 12266 --gui 2 --plot-n-paths 3  --ckpt outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_model.pt --keep-traces 1
-python analyze/sim_sine_pose_waypoints.py --gui 2  --seed 61526  --ckpt outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_model.pt
+python analyze/render_sine_pose_demonstrations.py --demo-indices 1,2,3,4,5,6 --draw-ref-trace 0 --draw-ee-trace 1 --trace-surface-clearance 0.018 --trace-stride 1 --demo-smooth-passes 1 --play-fps 45 --video-slowdown 1.0
+python analyze/sim_sine_pose_obsavoid.py --seed 12266 --gui 0 --plot-n-paths 3  --ckpt outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_model.pt --keep-traces 1
+python analyze/sim_sine_pose_waypoints.py --gui 0  --seed 61526  --ckpt outputs/bench/paper_scale_150_3env_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_model.pt
 
-python analyze/render_sine_pose_demonstrations.py   --n-demos 7   --draw-ref-trace 0   --draw-ee-trace 1   --trace-surface-clearance 0.018   --trace-stride 1   --demo-smooth-passes 1   --play-fps 50   --video-slowdown 1.0
-
-
-python analyze/plan_dual_arm_from_learned_constraint.py \
-  --ckpt outputs/bench/test_12d_dual_arm_v2/oncl/12d_dual_arm_traj_oncl_model.pt \
-  --outdir outputs/bench/test_12d_dual_arm_v2/oncl_plan \
-  --seed 112
-
-python analyze/sim_dual_arm_planned_path.py \
-  --plan-outdir outputs/bench/test_12d_dual_arm_v2/oncl_plan \
-  --gui 1 \
-  --save-snapshots 1 \
-  --snapshot-steps 100,300,500,750,1000 \
-  --snapshot-dir outputs/bench/test_12d_dual_arm_v2/oncl_plan/paper_snaps \
-  --planned-path-key path_0
+python analyze/plan_dual_arm_from_learned_constraint.py --ckpt outputs/bench/paper_mix_2d_3d6d_traj_vs_nontraj_7seed/oncl/12d_dual_arm_traj_oncl_model.pt --outdir outputs/bench/paper_mix_2d_3d6d_traj_vs_nontraj_7seed/oncl --seed 112 --n-trajs 7 --planner-mode traj_opt --traj-opt-objective minimal_refinit_zlinear --init-mode nearest_demo --plot-arms 0 --opt-steps 3000 --opt-lr 0.001 --lam-manifold 1.0 --lam-ref-path 0.02 --lam-center-z-ref 0.01
+python analyze/sim_dual_arm_planned_path.py --plan-outdir outputs/bench/paper_mix_2d_3d6d_traj_vs_nontraj_7seed/oncl/sim_dual_arms/ --gui 0 --save-snapshots 1 --snapshot-steps 100,500,750,1000,1250,1600 --planned-path-key path_6
+python analyze/sim_dual_arm_planned_path.py --path-source demo --demo-count 5 --render-outdir outputs/bench/paper_mix_2d_3d6d_traj_vs_nontraj_7seed/oncl/sim_dual_arms --gui 1
 
 
 python runners/run_benchmark.py \
@@ -24,6 +13,8 @@ python runners/run_benchmark.py \
   --seeds 0,1,2,3,4,5,6 \
   --outdir outputs/bench/paper_mix_2d_3d6d_traj_vs_nontraj_7seed\
   --rewrite
+
+python analyze/sim_dual_arm_planned_path.py --path-source demo --demo-indices 0,2,5 --demo-boundary-hold-steps 4 --render-outdir outputs/bench/dual_arm_demo_path_0_2_5 --gui 2 --orientation-mode task
 
 
 # LearnEqConstraints

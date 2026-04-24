@@ -13,6 +13,7 @@ from types import SimpleNamespace
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.ticker import MaxNLocator
 
 _THIS_DIR = os.path.dirname(__file__)
 _REPO_ROOT = os.path.abspath(os.path.join(_THIS_DIR, ".."))
@@ -38,7 +39,7 @@ from datasets.constraint_datasets import (
     sine_surface_apply_affine_xy,
     sine_surface_z_and_normal_from_xy,
 )
-from models.ik_controller import IKConfig, JointTrackConfig, UR5TrajectoryController
+from models.ik_controller import IKConfig, JointTrackConfig, UR5TrajectoryController, _FFmpegVideoWriter
 
 
 def _quat_conjugate(q: np.ndarray) -> np.ndarray:
@@ -282,6 +283,138 @@ def _concat_videos_ffmpeg(segment_paths: list[str], out_path: str) -> str | None
             pass
 
 
+def _video_frame_schedule(n_steps: int, *, sim_dt: float, video_fps: int) -> np.ndarray:
+    n = int(max(0, n_steps))
+    if n <= 0:
+        return np.zeros((0,), dtype=np.int32)
+    capture_every = max(1, int(round(1.0 / max(float(sim_dt) * float(video_fps), 1e-8))))
+    # Match track_joint_trajectory(): one initial post-settle frame, then
+    # frames sampled from control steps at the writer cadence.
+    idx = [-1]
+    for i in range(n):
+        if ((i + 1) % capture_every == 0) or (i == n - 1):
+            idx.append(i)
+    return np.asarray(idx, dtype=np.int32)
+
+
+def _make_error_curve_video(
+    *,
+    pos_err: np.ndarray,
+    ori_err_deg: np.ndarray,
+    sim_dt: float,
+    video_fps: int,
+    video_slowdown: float,
+    out_path: str,
+    width: int = 760,
+    height: int = 430,
+) -> str | None:
+    pos = np.asarray(pos_err, dtype=np.float32).reshape(-1)
+    ori = np.asarray(ori_err_deg, dtype=np.float32).reshape(-1)
+    n = int(min(len(pos), len(ori)))
+    if n <= 0:
+        return None
+    idx = _video_frame_schedule(n, sim_dt=float(sim_dt), video_fps=int(video_fps))
+    if len(idx) == 0:
+        return None
+    os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+    out_fps = float(video_fps) / max(float(video_slowdown), 1e-3)
+    writer = _FFmpegVideoWriter(out_path=os.path.abspath(out_path), width=int(width), height=int(height), fps=out_fps)
+
+    t = np.arange(n, dtype=np.float32) * float(sim_dt)
+    pos_mm = pos * 1000.0
+    pos_lim = max(float(np.percentile(pos_mm[np.isfinite(pos_mm)], 99)) if np.isfinite(pos_mm).any() else 0.0, 0.1)
+    ori_lim = max(float(np.percentile(ori[np.isfinite(ori)], 99)) if np.isfinite(ori).any() else 0.0, 1e-2)
+    pos_lim *= 1.15
+    ori_lim *= 1.15
+    fig, axes = plt.subplots(2, 1, figsize=(float(width) / 100.0, float(height) / 100.0), dpi=100, sharex=True)
+    fig.patch.set_facecolor("#f8fafc")
+    axes[0].set_facecolor("white")
+    axes[1].set_facecolor("white")
+    line_pos, = axes[0].plot([], [], color="#2563eb", lw=2.8, solid_capstyle="round")
+    fill_pos = axes[0].fill_between([], [], [], color="#93c5fd", alpha=0.35)
+    dot_pos, = axes[0].plot([], [], marker="o", color="#1d4ed8", ms=6, linestyle="None")
+    vline_pos = axes[0].axvline(0.0, color="#1d4ed8", lw=1.2, ls="--", alpha=0.55)
+    line_ori, = axes[1].plot([], [], color="#dc2626", lw=2.8, solid_capstyle="round")
+    fill_ori = axes[1].fill_between([], [], [], color="#fca5a5", alpha=0.35)
+    dot_ori, = axes[1].plot([], [], marker="o", color="#b91c1c", ms=6, linestyle="None")
+    vline_ori = axes[1].axvline(0.0, color="#b91c1c", lw=1.2, ls="--", alpha=0.55)
+    axes[0].set_ylabel("mm", fontsize=11, fontweight="bold")
+    axes[1].set_ylabel("deg", fontsize=11, fontweight="bold")
+    axes[1].set_xlabel("Time (s)", fontsize=11, fontweight="bold")
+    axes[0].set_ylim(0.0, pos_lim)
+    axes[1].set_ylim(0.0, ori_lim)
+    axes[0].set_xlim(float(t[0]), float(t[-1]) if len(t) > 1 else float(t[0] + sim_dt))
+    for ax in axes:
+        ax.grid(alpha=0.18, linewidth=0.8)
+        ax.tick_params(axis="both", labelsize=10, width=0.8, length=3)
+        ax.yaxis.set_major_locator(MaxNLocator(nbins=3))
+        ax.xaxis.set_major_locator(MaxNLocator(nbins=4))
+        for side in ("top", "right"):
+            ax.spines[side].set_visible(False)
+        ax.spines["left"].set_color("#cbd5e1")
+        ax.spines["bottom"].set_color("#cbd5e1")
+    axes[0].text(
+        0.01, 0.96, "Position error to true constraint", transform=axes[0].transAxes,
+        fontsize=12, fontweight="bold", color="#1e3a8a", va="top"
+    )
+    axes[1].text(
+        0.01, 0.96, "Orientation error to true constraint", transform=axes[1].transAxes,
+        fontsize=12, fontweight="bold", color="#991b1b", va="top"
+    )
+    value_pos = axes[0].text(
+        0.99, 0.92, "", transform=axes[0].transAxes,
+        fontsize=15, fontweight="bold", color="#1d4ed8", ha="right", va="top",
+        bbox=dict(boxstyle="round,pad=0.25", fc="#dbeafe", ec="#93c5fd", lw=0.9)
+    )
+    value_ori = axes[1].text(
+        0.99, 0.92, "", transform=axes[1].transAxes,
+        fontsize=15, fontweight="bold", color="#b91c1c", ha="right", va="top",
+        bbox=dict(boxstyle="round,pad=0.25", fc="#fee2e2", ec="#fca5a5", lw=0.9)
+    )
+    fig.subplots_adjust(left=0.10, right=0.992, bottom=0.11, top=0.985, hspace=0.34)
+    try:
+        for k_raw in idx.tolist():
+            k = int(np.clip(k_raw, 0, n - 1))
+            kk = k + 1
+            x_now = float(t[k]) if k_raw >= 0 else 0.0
+            line_pos.set_data(t[:kk], pos_mm[:kk])
+            dot_pos.set_data([x_now], [pos_mm[k]])
+            vline_pos.set_xdata([x_now, x_now])
+            line_ori.set_data(t[:kk], ori[:kk])
+            dot_ori.set_data([x_now], [ori[k]])
+            vline_ori.set_xdata([x_now, x_now])
+            value_pos.set_text(f"{pos_mm[k]:.1f} mm")
+            value_ori.set_text(f"{ori[k]:.2f}°")
+            fill_pos.remove()
+            fill_ori.remove()
+            fill_pos = axes[0].fill_between(t[:kk], pos_mm[:kk], np.zeros((kk,), dtype=np.float32), color="#93c5fd", alpha=0.35)
+            fill_ori = axes[1].fill_between(t[:kk], ori[:kk], np.zeros((kk,), dtype=np.float32), color="#fca5a5", alpha=0.35)
+            fig.canvas.draw()
+            frame = np.asarray(fig.canvas.buffer_rgba(), dtype=np.uint8)[..., :3].copy()
+            writer.append_data(frame)
+    finally:
+        try:
+            writer.close()
+        finally:
+            plt.close(fig)
+    return os.path.abspath(out_path)
+
+
+def _cleanup_segment_videos(segment_paths: list[str], final_video_path: str | None) -> None:
+    final_abs = os.path.abspath(final_video_path) if final_video_path else None
+    for path in segment_paths:
+        if not path:
+            continue
+        try:
+            path_abs = os.path.abspath(path)
+            if final_abs is not None and path_abs == final_abs:
+                continue
+            if os.path.exists(path_abs):
+                os.remove(path_abs)
+        except OSError:
+            pass
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Plan a 6D sine-pose trajectory, solve it to UR5 joints, and track it in PyBullet."
@@ -301,7 +434,6 @@ def main() -> None:
     parser.add_argument("--pair-tries", type=int, default=1600, help="Pair sampling retries.")
     parser.add_argument("--planner-mode", choices=["traj_opt", "point_project"], default="traj_opt", help="Planning mode.")
     parser.add_argument("--pair-force-cross-obstacle", type=int, default=1, help="1 to force obstacle crossing.")
-    parser.add_argument("--n-render-trajs", type=int, default=4, help="Total number of trajectories to plan and render sequentially.")
     parser.add_argument("--n-force-cross-trajs", type=int, default=3, help="How many trajectories should be sampled with explicit obstacle-crossing geometry.")
     parser.add_argument(
         "--pair-cross-radius-scale",
@@ -360,7 +492,7 @@ def main() -> None:
         "--plot-n-paths",
         type=int,
         default=4,
-        help="Maximum number of planned/executed path pairs shown in the static planning plot.",
+        help="Number of trajectories to plan/render, and also the number of planned/executed path pairs shown in the static planning plot.",
     )
     parser.add_argument(
         "--ik-iters", type=int, default=64, help="Per-point DLS IK iterations."
@@ -410,7 +542,8 @@ def main() -> None:
     )
     parser.add_argument("--realtime", type=int, default=0, help="1 to sleep between sim steps.")
     parser.add_argument("--video-name", default="sinepose_ur5_tracking.mp4", help="MP4 filename.")
-    parser.add_argument("--video-slowdown", type=float, default=1.5, help="Slow down saved video playback by this factor without changing control.")
+    parser.add_argument("--video-slowdown", type=float, default=1.0, help="Slow down saved video playback by this factor without changing control.")
+    parser.add_argument("--save-error-video", type=int, default=1, help="1 to save a synchronized error-curve video.")
     args = parser.parse_args()
 
     ckpt_path = _resolve_path(args.ckpt)
@@ -453,7 +586,7 @@ def main() -> None:
         lam_obstacle=float(args.lam_obstacle),
     )
 
-    n_render_trajs = int(max(1, args.n_render_trajs))
+    n_render_trajs = int(max(1, args.plot_n_paths))
     n_force_cross = int(np.clip(args.n_force_cross_trajs, 0, n_render_trajs))
     rng = np.random.default_rng(int(args.seed))
     selected_endpoints: list[np.ndarray] = []
@@ -545,7 +678,12 @@ def main() -> None:
     save_video = int(args.gui) == 1
     use_gui = int(args.gui) == 2
     final_video_path = os.path.join(outdir, str(args.video_name)) if save_video else None
+    final_error_video_path = None
+    if int(args.save_error_video) == 1:
+        video_root, video_ext = os.path.splitext(str(args.video_name))
+        final_error_video_path = os.path.join(outdir, f"{video_root}_errors{video_ext or '.mp4'}")
     segment_video_paths: list[str] = []
+    segment_error_video_paths: list[str] = []
     segment_metrics: list[dict[str, object]] = []
     exec_cases: list[PairCase] = []
     plan_cases: list[PairCase] = []
@@ -607,6 +745,10 @@ def main() -> None:
             if final_video_path:
                 root, ext = os.path.splitext(final_video_path)
                 segment_video_path = f"{root}_segment_{case_idx + 1:02d}{ext or '.mp4'}"
+            segment_error_video_path = None
+            if final_error_video_path:
+                root, ext = os.path.splitext(final_error_video_path)
+                segment_error_video_path = f"{root}_segment_{case_idx + 1:02d}{ext or '.mp4'}"
             track = ctrl.track_joint_trajectory(
                 q_ref,
                 qd_ref=qd_ref,
@@ -642,6 +784,17 @@ def main() -> None:
                 exec_pose,
                 surface_cfg=surface_cfg,
             )
+            if segment_error_video_path is not None:
+                err_vid = _make_error_curve_video(
+                    pos_err=surface_pos_err.astype(np.float32),
+                    ori_err_deg=surface_ori_err_deg.astype(np.float32),
+                    sim_dt=float(track["sim_dt"]),
+                    video_fps=int(track_cfg.video_fps),
+                    video_slowdown=float(track_cfg.video_slowdown),
+                    out_path=segment_error_video_path,
+                )
+                if isinstance(err_vid, str) and err_vid:
+                    segment_error_video_paths.append(err_vid)
             exec_case = PairCase(
                 start=exec_pose_plot[0].astype(np.float32),
                 goal=exec_pose_plot[-1].astype(np.float32),
@@ -704,14 +857,18 @@ def main() -> None:
                     },
                     "executed_constraint_error": {
                         "mean_surface_pos_err": float(np.mean(surface_pos_err)),
+                        "std_surface_pos_err": float(np.std(surface_pos_err)),
                         "max_surface_pos_err": float(np.max(surface_pos_err)),
                         "mean_surface_ori_err_deg": float(np.mean(surface_ori_err_deg)),
+                        "std_surface_ori_err_deg": float(np.std(surface_ori_err_deg)),
                         "max_surface_ori_err_deg": float(np.max(surface_ori_err_deg)),
                     },
                     "planned_constraint_error": {
                         "mean_surface_pos_err": float(np.mean(planned_surface_pos_err)),
+                        "std_surface_pos_err": float(np.std(planned_surface_pos_err)),
                         "max_surface_pos_err": float(np.max(planned_surface_pos_err)),
                         "mean_surface_ori_err_deg": float(np.mean(planned_surface_ori_err_deg)),
+                        "std_surface_ori_err_deg": float(np.std(planned_surface_ori_err_deg)),
                         "max_surface_ori_err_deg": float(np.max(planned_surface_ori_err_deg)),
                     },
                 }
@@ -750,7 +907,7 @@ def main() -> None:
         out_path=error_plot,
     )
     traj_plot = os.path.join(outdir, "sinepose_tracking_obstacle_planning.png")
-    n_plot_paths = int(max(1, min(args.plot_n_paths, len(plan_cases), len(exec_cases))))
+    n_plot_paths = int(max(1, min(n_render_trajs, len(plan_cases), len(exec_cases))))
     plan_plot_cases = plan_cases[:n_plot_paths]
     exec_plot_cases = exec_cases[:n_plot_paths]
     plot_cases = plan_plot_cases + exec_plot_cases
@@ -793,6 +950,11 @@ def main() -> None:
     )
 
     merged_video_path = _concat_videos_ffmpeg(segment_video_paths, final_video_path) if final_video_path else None
+    if merged_video_path:
+        _cleanup_segment_videos(segment_video_paths, merged_video_path)
+    merged_error_video_path = _concat_videos_ffmpeg(segment_error_video_paths, final_error_video_path) if final_error_video_path else None
+    if merged_error_video_path:
+        _cleanup_segment_videos(segment_error_video_paths, merged_error_video_path)
     np.savez_compressed(
         os.path.join(outdir, "sinepose_ur5_tracking_arrays.npz"),
         time_exec_all=time_exec_all,
@@ -814,7 +976,9 @@ def main() -> None:
         "task": "sinepose_ur5_tracking",
         "ckpt": ckpt_path,
         "video_path": merged_video_path,
-        "segment_video_paths": segment_video_paths,
+        "error_video_path": merged_error_video_path,
+        "segment_video_paths": ([] if merged_video_path else segment_video_paths),
+        "segment_error_video_paths": ([] if merged_error_video_path else segment_error_video_paths),
         "error_plot": os.path.abspath(error_plot),
         "traj_plot": os.path.abspath(traj_plot),
         "distribution_plot": os.path.abspath(dist_plot),
@@ -843,8 +1007,10 @@ def main() -> None:
         },
         "executed_constraint_error": {
             "mean_surface_pos_err": float(np.mean(surface_pos_err_all)) if len(surface_pos_err_all) > 0 else 0.0,
+            "std_surface_pos_err": float(np.std(surface_pos_err_all)) if len(surface_pos_err_all) > 0 else 0.0,
             "max_surface_pos_err": float(np.max(surface_pos_err_all)) if len(surface_pos_err_all) > 0 else 0.0,
             "mean_surface_ori_err_deg": float(np.mean(surface_ori_err_deg_all)) if len(surface_ori_err_deg_all) > 0 else 0.0,
+            "std_surface_ori_err_deg": float(np.std(surface_ori_err_deg_all)) if len(surface_ori_err_deg_all) > 0 else 0.0,
             "max_surface_ori_err_deg": float(np.max(surface_ori_err_deg_all)) if len(surface_ori_err_deg_all) > 0 else 0.0,
         },
         "controller_cfg": {
@@ -897,6 +1063,8 @@ def main() -> None:
     print(f"[saved] {dist_plot}")
     if merged_video_path:
         print(f"[saved] {merged_video_path}")
+    if merged_error_video_path:
+        print(f"[saved] {merged_error_video_path}")
 
 
 if __name__ == "__main__":

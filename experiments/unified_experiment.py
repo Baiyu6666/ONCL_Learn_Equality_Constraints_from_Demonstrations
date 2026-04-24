@@ -414,6 +414,7 @@ def _save_common_method_plots(
             axis_labels=(labels[0], labels[1], labels[2]),
             cfg=vis_cfg,
             intersection_points=eval_artifacts.get("proj", None),
+            dataset_name=str(dataset),
         )
         worst_traj_3d, worst_x0_3d = _worst_case_traj_3d(
             dataset=str(dataset),

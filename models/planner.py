@@ -539,6 +539,9 @@ def plan_path_optimized(
     lam_ref_xy: float = 0.0,
     ref_path: np.ndarray | None = None,
     lam_ref_path: float = 0.0,
+    ref_center_z: np.ndarray | None = None,
+    lam_center_z_ref: float = 0.0,
+    lam_center_z_smooth: float = 0.0,
     lam_backtrack_xy: float = 0.0,
     lam_detour_xy: float = 0.0,
     detour_soft_cap_xy: float = 0.0,
@@ -599,6 +602,11 @@ def plan_path_optimized(
         ref_full = np.asarray(ref_path, dtype=np.float32)
         if ref_full.shape == path0.shape:
             ref_path_t = torch.tensor(ref_full, device=device, dtype=torch.float32)
+    ref_center_z_t = None
+    if ref_center_z is not None and q.shape[1] >= 9 and float(lam_center_z_ref) > 0.0:
+        ref_cz = np.asarray(ref_center_z, dtype=np.float32).reshape(-1)
+        if ref_cz.shape[0] == path0.shape[0]:
+            ref_center_z_t = torch.tensor(ref_cz, device=device, dtype=torch.float32)
     for _ in range(int(opt_steps)):
         q_prev = q.detach().clone()
         opt.zero_grad(set_to_none=True)
@@ -633,6 +641,21 @@ def plan_path_optimized(
             loss_ref_path = (diff_ref ** 2).mean()
         else:
             loss_ref_path = torch.tensor(0.0, device=q.device)
+        if q.shape[1] >= 9:
+            center_z = 0.5 * (q[:, 2] + q[:, 8])
+            if ref_center_z_t is not None:
+                loss_center_z_ref = ((center_z - ref_center_z_t) ** 2).mean()
+            else:
+                loss_center_z_ref = torch.tensor(0.0, device=q.device)
+            if q.shape[0] >= 3 and float(lam_center_z_smooth) > 0.0:
+                dcz = center_z[1:] - center_z[:-1]
+                ddcz = dcz[1:] - dcz[:-1]
+                loss_center_z_smooth = (ddcz ** 2).mean()
+            else:
+                loss_center_z_smooth = torch.tensor(0.0, device=q.device)
+        else:
+            loss_center_z_ref = torch.tensor(0.0, device=q.device)
+            loss_center_z_smooth = torch.tensor(0.0, device=q.device)
         if q.shape[1] >= 2 and float(lam_backtrack_xy) > 0.0:
             chord = qT[:2] - q0[:2]
             chord_n = torch.linalg.norm(chord)
@@ -668,6 +691,8 @@ def plan_path_optimized(
             + float(obs_weight) * loss_obs
             + float(max(0.0, lam_ref_xy)) * loss_ref
             + float(max(0.0, lam_ref_path)) * loss_ref_path
+            + float(max(0.0, lam_center_z_ref)) * loss_center_z_ref
+            + float(max(0.0, lam_center_z_smooth)) * loss_center_z_smooth
             + float(max(0.0, lam_backtrack_xy)) * loss_backtrack
             + float(max(0.0, lam_detour_xy)) * loss_detour
         )
@@ -756,6 +781,16 @@ def _planner_bool(cfg: Any, key: str, default: bool) -> bool:
         except Exception:
             return bool(default)
     return bool(default)
+
+
+def _planner_str(cfg: Any, key: str, default: str) -> str:
+    pln = getattr(cfg, "planner", None)
+    if isinstance(pln, dict) and key in pln:
+        try:
+            return str(pln[key])
+        except Exception:
+            return str(default)
+    return str(default)
 
 
 def _planner_center_xy(cfg: Any) -> tuple[float, float] | None:
@@ -1096,6 +1131,11 @@ def plan_path(
             periodic=bool(periodic),
         )
     if p == "traj_opt":
+        objective_mode = _planner_str(cfg, "traj_opt_objective", "full").strip().lower()
+        minimal_objective = objective_mode in ("minimal", "minimal_zsmooth", "minimal_refinit", "minimal_refinit_zlinear")
+        minimal_with_zsmooth = objective_mode == "minimal_zsmooth"
+        minimal_with_refinit = objective_mode == "minimal_refinit"
+        minimal_with_refinit_zlinear = objective_mode == "minimal_refinit_zlinear"
         obs_enabled = _planner_bool(cfg, "obstacle_enable", False)
         obs_center = _planner_center_xy(cfg) if obs_enabled else None
         obs_radius = _planner_float(cfg, "obstacle_radius", 0.0) if obs_enabled else 0.0
@@ -1103,6 +1143,8 @@ def plan_path(
         obs_weight = _planner_float(cfg, "lam_obstacle", 0.0) if obs_enabled else 0.0
         obs_excl_ep = _planner_bool(cfg, "obstacle_exclude_endpoints", True)
         lam_ref_path = _planner_float(cfg, "lam_ref_path", 0.0)
+        lam_center_z_ref = _planner_float(cfg, "lam_center_z_ref", 0.0)
+        lam_center_z_smooth = _planner_float(cfg, "lam_center_z_smooth", 0.0)
         bound_indices = _planner_int_list(cfg, "bound_indices")
         bound_lo = _planner_float(cfg, "bound_lo", float("nan"))
         bound_hi = _planner_float(cfg, "bound_hi", float("nan"))
@@ -1125,6 +1167,18 @@ def plan_path(
                 obstacle_radius=float(obs_radius),
                 obstacle_margin=float(obs_margin),
             )
+        if minimal_objective:
+            obs_center = None
+            obs_radius = 0.0
+            obs_margin = 0.0
+            obs_weight = 0.0
+            lam_ref_path = (lam_ref_path if (minimal_with_refinit or minimal_with_refinit_zlinear) else 0.0)
+            lam_center_z_ref = (lam_center_z_ref if minimal_with_refinit_zlinear else 0.0)
+            lam_center_z_smooth = (lam_center_z_smooth if minimal_with_zsmooth else 0.0)
+            bound_indices = None
+            bound_lo = None
+            bound_hi = None
+            direct_path_blocked = False
         linear_ref_weight = 6.0 if not bool(direct_path_blocked) else 0.0
         detour_soft_cap = float(max(0.0, float(obs_radius) + float(obs_margin) + 0.03)) if obs_enabled else 0.0
         common_kwargs = dict(
@@ -1133,8 +1187,8 @@ def plan_path(
             opt_steps=int(_cfg_val(cfg, ["planner.opt_steps"], 1240)),
             opt_lr=float(_cfg_val(cfg, ["planner.opt_lr"], 0.01)),
             lam_manifold=float(_cfg_val(cfg, ["planner.lam_manifold"], 1.0)),
-            lam_len=float(_cfg_val(cfg, ["planner.lam_len_joint"], 0.40)),
-            lam_smooth=float(_cfg_val(cfg, ["planner.opt_lam_smooth"], 0.2)),
+            lam_len=(0.0 if minimal_objective else float(_cfg_val(cfg, ["planner.lam_len_joint"], 0.40))),
+            lam_smooth=(0.0 if minimal_objective else float(_cfg_val(cfg, ["planner.opt_lam_smooth"], 0.2))),
             trust_scale=float(_cfg_val(cfg, ["planner.trust_scale"], 0.8)),
             periodic=bool(periodic),
             obstacle_center_xy=obs_center,
@@ -1142,22 +1196,32 @@ def plan_path(
             obstacle_margin=float(obs_margin),
             lam_obstacle=float(obs_weight),
             obstacle_exclude_endpoints=bool(obs_excl_ep),
-            lam_backtrack_xy=1.0 if bool(direct_path_blocked) else 0.6,
-            lam_detour_xy=1.4 if bool(direct_path_blocked) else 0.9,
+            lam_backtrack_xy=(0.0 if minimal_objective else (1.0 if bool(direct_path_blocked) else 0.6)),
+            lam_detour_xy=(0.0 if minimal_objective else (1.4 if bool(direct_path_blocked) else 0.9)),
             detour_soft_cap_xy=detour_soft_cap,
             lam_ref_path=float(lam_ref_path),
+            lam_center_z_ref=float(lam_center_z_ref),
+            lam_center_z_smooth=float(lam_center_z_smooth),
             bound_indices=bound_indices,
             bound_lo=bound_lo,
             bound_hi=bound_hi,
         )
         if init_path is not None:
+            ref_center_z = None
+            if minimal_with_refinit_zlinear and init_path.ndim == 2 and init_path.shape[1] >= 9 and x_start.shape[0] >= 9:
+                cz0 = 0.5 * float(x_start[2] + x_start[8])
+                czT = 0.5 * float(x_goal[2] + x_goal[8])
+                ref_center_z = np.linspace(cz0, czT, int(init_path.shape[0]), dtype=np.float32)
+            elif (not minimal_objective) and init_path.ndim == 2 and init_path.shape[1] >= 9:
+                ref_center_z = (0.5 * (init_path[:, 2] + init_path[:, 8])).astype(np.float32)
             return plan_path_optimized(
                 model,
                 x_start,
                 x_goal,
                 init_path=init_path,
-                ref_path_xy=init_path.astype(np.float32),
-                ref_path=init_path.astype(np.float32),
+                ref_path_xy=(None if minimal_objective else init_path.astype(np.float32)),
+                ref_path=(init_path.astype(np.float32) if (minimal_with_refinit or (not minimal_objective)) else None),
+                ref_center_z=ref_center_z,
                 **common_kwargs,
             )
         linear_init = build_linear_path(
@@ -1186,6 +1250,7 @@ def plan_path(
                     init_path=cand.astype(np.float32),
                     ref_path_xy=cand.astype(np.float32),
                     ref_path=cand.astype(np.float32),
+                    ref_center_z=(0.5 * (cand[:, 2] + cand[:, 8])).astype(np.float32) if cand.shape[1] >= 9 else None,
                     lam_ref_xy=0.45,
                     **common_kwargs,
                 )
@@ -1207,6 +1272,7 @@ def plan_path(
             init_path=linear_init.astype(np.float32),
             ref_path_xy=linear_init.astype(np.float32) if not bool(direct_path_blocked) else None,
             ref_path=linear_init.astype(np.float32),
+            ref_center_z=(0.5 * (linear_init[:, 2] + linear_init[:, 8])).astype(np.float32) if linear_init.shape[1] >= 9 else None,
             lam_ref_xy=linear_ref_weight,
             **common_kwargs,
         )

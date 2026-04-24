@@ -389,9 +389,6 @@ class CircleConstraintNet(nn.Module):
         s=self.softplus(rho); diff=x-torch.stack([cx,cy])[None,:]
         sq=torch.sum(diff*diff,dim=1,keepdim=True); return sq-s
 
-# TODO: EllipseConstraintNet, RectangleConstraintNet 与之前一致，这里省略
-# 你可以直接插入你原来的实现
-
 # ===================================================
 # 组合器
 # ===================================================

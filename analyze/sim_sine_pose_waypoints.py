@@ -37,6 +37,7 @@ from analyze.plan_sine_pose_waypoints_from_learned_constraint import (  # noqa: 
 from analyze.sim_sine_pose_obsavoid import (  # noqa: E402
     _apply_quat_offset_batch,
     _downsample_traj_for_plot,
+    _make_error_curve_video,
     _make_surface_patch_xyz_grid,
     _orientation_error_deg,
     _plot_tracking_errors,
@@ -231,6 +232,7 @@ def main() -> None:
     parser.add_argument("--realtime", type=int, default=0, help="1 to sleep between sim steps.")
     parser.add_argument("--video-name", default="sinepose_waypoints_ur5_tracking.mp4", help="MP4 filename.")
     parser.add_argument("--video-slowdown", type=float, default=1, help="Slow down saved video playback.")
+    parser.add_argument("--save-error-video", type=int, default=1, help="1 to save a synchronized error-curve video.")
     args = parser.parse_args()
 
     ckpt_path = _resolve_path(args.ckpt)
@@ -319,6 +321,10 @@ def main() -> None:
     save_video = int(args.gui) == 1
     use_gui = int(args.gui) == 2
     video_path = os.path.join(outdir, str(args.video_name)) if save_video else None
+    error_video_path = None
+    if int(args.save_error_video) == 1:
+        video_root, video_ext = os.path.splitext(str(args.video_name))
+        error_video_path = os.path.join(outdir, f"{video_root}_errors{video_ext or '.mp4'}")
 
     with UR5TrajectoryController(
         gui=use_gui,
@@ -373,6 +379,16 @@ def main() -> None:
     pos_track_err = np.linalg.norm(track["ee_pos"] - pos_des_dense, axis=1).astype(np.float32)
     ori_track_err_deg = _orientation_error_deg(q_des_quat_dense, ee_quat_task).astype(np.float32)
     surface_pos_err, surface_ori_err_deg = _error_to_true_constraint(exec_pose, surface_cfg=surface_cfg)
+    saved_error_video_path = None
+    if error_video_path is not None:
+        saved_error_video_path = _make_error_curve_video(
+            pos_err=surface_pos_err.astype(np.float32),
+            ori_err_deg=surface_ori_err_deg.astype(np.float32),
+            sim_dt=float(track["sim_dt"]),
+            video_fps=int(track_cfg.video_fps),
+            video_slowdown=float(track_cfg.video_slowdown),
+            out_path=error_video_path,
+        )
 
     arrays_path = os.path.join(outdir, "sinepose_waypoints_ur5_tracking_arrays.npz")
     np.savez_compressed(
@@ -460,14 +476,18 @@ def main() -> None:
         },
         "planned_constraint_error": {
             "mean_surface_pos_err": float(np.mean(planned_surface_pos_err)),
+            "std_surface_pos_err": float(np.std(planned_surface_pos_err)),
             "max_surface_pos_err": float(np.max(planned_surface_pos_err)),
             "mean_surface_ori_err_deg": float(np.mean(planned_surface_ori_err_deg)),
+            "std_surface_ori_err_deg": float(np.std(planned_surface_ori_err_deg)),
             "max_surface_ori_err_deg": float(np.max(planned_surface_ori_err_deg)),
         },
         "executed_constraint_error": {
             "mean_surface_pos_err": float(np.mean(surface_pos_err)),
+            "std_surface_pos_err": float(np.std(surface_pos_err)),
             "max_surface_pos_err": float(np.max(surface_pos_err)),
             "mean_surface_ori_err_deg": float(np.mean(surface_ori_err_deg)),
+            "std_surface_ori_err_deg": float(np.std(surface_ori_err_deg)),
             "max_surface_ori_err_deg": float(np.max(surface_ori_err_deg)),
         },
         "render": {
@@ -480,6 +500,7 @@ def main() -> None:
         },
         "outputs": {
             "video": str(track.get("video_path")) if track.get("video_path") else None,
+            "error_video": str(saved_error_video_path) if saved_error_video_path else None,
             "tracking_overview_plot": tracking_fig,
             "distribution_plot": dist_fig,
             "tracking_error_plot": tracking_err_fig,
@@ -508,6 +529,8 @@ def main() -> None:
     print(f"[saved] {arrays_path}")
     if track.get("video_path"):
         print(f"[saved] {track['video_path']}")
+    if saved_error_video_path:
+        print(f"[saved] {saved_error_video_path}")
 
 
 if __name__ == "__main__":

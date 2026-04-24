@@ -215,6 +215,25 @@ def _interp_rpy_shortest(rpy0: np.ndarray, rpy1: np.ndarray, t: np.ndarray) -> n
     return _wrap_pi(a0 + tt * delta).astype(np.float32)
 
 
+def _blend_paths_shortest(path_a: np.ndarray, path_b: np.ndarray, blend: float) -> np.ndarray:
+    a = np.asarray(path_a, dtype=np.float32)
+    b = np.asarray(path_b, dtype=np.float32)
+    w = float(np.clip(blend, 0.0, 1.0))
+    if w <= 0.0:
+        return a.astype(np.float32)
+    if w >= 1.0:
+        return b.astype(np.float32)
+    out = ((1.0 - w) * a + w * b).astype(np.float32)
+    for dims in ([3, 4, 5], [9, 10, 11]):
+        aa = a[:, dims].astype(np.float32)
+        bb = b[:, dims].astype(np.float32)
+        delta = _wrap_pi(bb - aa).astype(np.float32)
+        out[:, dims] = _wrap_pi(aa + w * delta).astype(np.float32)
+    out[0] = a[0].astype(np.float32)
+    out[-1] = a[-1].astype(np.float32)
+    return out.astype(np.float32)
+
+
 def _center_interp_init_path(start: np.ndarray, goal: np.ndarray, n_waypoints: int) -> np.ndarray:
     s = np.asarray(start, dtype=np.float32).reshape(12)
     g = np.asarray(goal, dtype=np.float32).reshape(12)
@@ -347,6 +366,49 @@ def _resample_path_linear(path: np.ndarray, n_waypoints: int) -> np.ndarray:
     return out.astype(np.float32)
 
 
+def _unwrap_angle_series(a: np.ndarray) -> np.ndarray:
+    aa = np.asarray(a, dtype=np.float32).reshape(-1)
+    if aa.size == 0:
+        return aa.astype(np.float32)
+    out = np.zeros_like(aa, dtype=np.float32)
+    out[0] = aa[0]
+    for i in range(1, aa.shape[0]):
+        out[i] = out[i - 1] + float(_wrap_pi(aa[i] - aa[i - 1]))
+    return out.astype(np.float32)
+
+
+def _resample_path_center_arclength(path: np.ndarray, n_waypoints: int) -> np.ndarray:
+    pp = np.asarray(path, dtype=np.float32)
+    n_dst = int(max(2, n_waypoints))
+    if len(pp) == n_dst:
+        # Still reparameterize in case the source has collapsed waypoint clusters.
+        pass
+    center = _centers(pp).astype(np.float32)
+    ds = np.linalg.norm(np.diff(center, axis=0), axis=1).astype(np.float32)
+    s = np.concatenate([np.zeros(1, dtype=np.float32), np.cumsum(ds, dtype=np.float32)], axis=0)
+    keep = np.ones(len(pp), dtype=bool)
+    keep[1:] = np.diff(s) > 1e-9
+    if int(np.count_nonzero(keep)) < 2 or float(s[-1]) <= 1e-9:
+        return _resample_path_linear(pp, n_dst).astype(np.float32)
+    src = pp[keep].astype(np.float32)
+    s_src = s[keep].astype(np.float32)
+    s_dst = np.linspace(0.0, float(s_src[-1]), n_dst, dtype=np.float32)
+    out = np.zeros((n_dst, pp.shape[1]), dtype=np.float32)
+    ang_dims = {3, 4, 5, 9, 10, 11}
+    for d in range(pp.shape[1]):
+        vals = src[:, d].astype(np.float32)
+        if d in ang_dims:
+            vals = _unwrap_angle_series(vals)
+            out[:, d] = _wrap_pi(np.interp(s_dst, s_src, vals).astype(np.float32))
+        else:
+            out[:, d] = np.interp(s_dst, s_src, vals).astype(np.float32)
+    out[0] = pp[0].astype(np.float32)
+    out[-1] = pp[-1].astype(np.float32)
+    out[:, 3:6] = _wrap_pi(out[:, 3:6])
+    out[:, 9:12] = _wrap_pi(out[:, 9:12])
+    return out.astype(np.float32)
+
+
 def _endpoint_warp_path(template: np.ndarray, start: np.ndarray, goal: np.ndarray) -> np.ndarray:
     tmp = np.asarray(template, dtype=np.float32).copy()
     s = np.asarray(start, dtype=np.float32).reshape(12)
@@ -385,7 +447,15 @@ def _split_demo_blocks(x_train: np.ndarray, traj_len: int) -> list[np.ndarray]:
     return [xx.astype(np.float32)] if len(xx) > 0 else []
 
 
-def _nearest_demo_init_path(start: np.ndarray, goal: np.ndarray, x_train: np.ndarray, cfg: Any, n_waypoints: int) -> np.ndarray:
+def _nearest_demo_init_path(
+    start: np.ndarray,
+    goal: np.ndarray,
+    x_train: np.ndarray,
+    cfg: Any,
+    n_waypoints: int,
+    *,
+    center_interp_blend: float = 0.0,
+) -> np.ndarray:
     xx = np.asarray(x_train, dtype=np.float32)
     traj_len = int(getattr(cfg, "traj_len", max(8, min(len(xx), 100))))
     blocks = _split_demo_blocks(xx, traj_len)
@@ -415,7 +485,12 @@ def _nearest_demo_init_path(start: np.ndarray, goal: np.ndarray, x_train: np.nda
 
     assert best_template is not None
     tmp = _resample_path_linear(best_template, int(n_waypoints))
-    return _endpoint_warp_path(tmp, s, g)
+    demo_warp = _endpoint_warp_path(tmp, s, g)
+    blend = float(np.clip(center_interp_blend, 0.0, 1.0))
+    if blend <= 0.0:
+        return demo_warp.astype(np.float32)
+    center_interp = _center_interp_init_path(s, g, int(n_waypoints))
+    return _blend_paths_shortest(demo_warp, center_interp, blend)
 
 
 def _rotation_geodesic_deg(rpy_a: np.ndarray, rpy_b: np.ndarray) -> np.ndarray:
@@ -634,17 +709,40 @@ def _planner_cfg(args: argparse.Namespace, device: str, task_cfg: Any) -> Any:
     p = _dual_arm_pose_params(task_cfg)
     z_lo = float(p["z_base"] - p["z_half_range"])
     z_hi = float(p["z_base"] + p["z_half_range"])
+    traj_opt_objective = str(args.traj_opt_objective).strip().lower()
+    minimal_traj_opt = traj_opt_objective in (
+        "minimal",
+        "minimal_zsmooth",
+        "minimal_refinit",
+        "minimal_refinit_zlinear",
+    )
+    minimal_with_zsmooth = traj_opt_objective == "minimal_zsmooth"
+    minimal_with_refinit = traj_opt_objective == "minimal_refinit"
+    minimal_with_refinit_zlinear = traj_opt_objective == "minimal_refinit_zlinear"
     planner = {
+        "traj_opt_objective": str(args.traj_opt_objective),
         "opt_steps": int(args.opt_steps),
         "opt_lr": float(args.opt_lr),
         "lam_manifold": float(args.lam_manifold),
-        "lam_len_joint": float(args.lam_len),
-        "opt_lam_smooth": float(args.lam_smooth),
-        "lam_ref_path": float(args.lam_ref_path),
+        "lam_len_joint": (0.0 if minimal_traj_opt else float(args.lam_len)),
+        "opt_lam_smooth": (0.0 if minimal_traj_opt else float(args.lam_smooth)),
+        "lam_ref_path": (
+            float(args.lam_ref_path)
+            if (minimal_with_refinit or minimal_with_refinit_zlinear)
+            else (0.0 if minimal_traj_opt else float(args.lam_ref_path))
+        ),
+        "lam_center_z_ref": (
+            float(args.lam_center_z_ref)
+            if minimal_with_refinit_zlinear
+            else (0.0 if minimal_traj_opt else float(args.lam_center_z_ref))
+        ),
+        "lam_center_z_smooth": (
+            float(args.lam_center_z_smooth) if minimal_with_zsmooth else (0.0 if minimal_traj_opt else float(args.lam_center_z_smooth))
+        ),
         "trust_scale": float(args.trust_scale),
         "obstacle_enable": False,
     }
-    if bool(int(args.enforce_z_bounds)):
+    if bool(int(args.enforce_z_bounds)) and not minimal_traj_opt:
         # Only constrain the two TCP z coordinates. No xy/ribbon/analytic-shape
         # penalty is used, so the learned constraint still defines the manifold.
         planner.update({"bound_indices": [2, 8], "bound_lo": z_lo, "bound_hi": z_hi})
@@ -665,11 +763,23 @@ def _point_project_path(
     *,
     x_start: np.ndarray,
     x_goal: np.ndarray,
+    task_cfg: Any,
     device: str,
     proj_steps: int,
     proj_alpha: float,
     proj_min_steps: int,
     f_abs_stop: float | None,
+    polish_iters: int,
+    center_z_smooth: float,
+    center_z_ref: float,
+    reproj_steps: int,
+    path_polish_steps: int,
+    path_polish_lr: float,
+    path_lam_manifold: float,
+    path_lam_smooth: float,
+    path_lam_len: float,
+    path_lam_ref_init: float,
+    path_lam_ref_proj: float,
 ) -> np.ndarray:
     proj, _steps = project_points_with_steps_numpy(
         model,
@@ -681,6 +791,85 @@ def _point_project_path(
         f_abs_stop=(None if f_abs_stop is None else float(f_abs_stop)),
     )
     out = np.asarray(proj, dtype=np.float32)
+    p = _dual_arm_pose_params(task_cfg)
+    z_lo = float(p["z_base"] - p["z_half_range"])
+    z_hi = float(p["z_base"] + p["z_half_range"])
+    init_center_z = (0.5 * (init_path[:, 2] + init_path[:, 8])).astype(np.float32)
+    polish_n = int(max(0, polish_iters))
+    smooth_w = float(np.clip(center_z_smooth, 0.0, 1.0))
+    ref_w = float(np.clip(center_z_ref, 0.0, 1.0))
+    if polish_n > 0 and len(out) >= 3 and (smooth_w > 0.0 or ref_w > 0.0):
+        reproj_n = int(max(0, reproj_steps))
+        for _ in range(polish_n):
+            center_z = (0.5 * (out[:, 2] + out[:, 8])).astype(np.float32)
+            target_z = center_z.copy()
+            local_avg = (0.5 * (center_z[:-2] + center_z[2:])).astype(np.float32)
+            target_z[1:-1] = (
+                (1.0 - smooth_w - ref_w) * center_z[1:-1]
+                + smooth_w * local_avg
+                + ref_w * init_center_z[1:-1]
+            ).astype(np.float32)
+            target_z[0] = float(center_z[0])
+            target_z[-1] = float(center_z[-1])
+            target_z = np.clip(target_z, z_lo, z_hi).astype(np.float32)
+            dz = (target_z - center_z).astype(np.float32)
+            out[:, 2] = (out[:, 2] + dz).astype(np.float32)
+            out[:, 8] = (out[:, 8] + dz).astype(np.float32)
+            out[:, 2] = np.clip(out[:, 2], z_lo, z_hi).astype(np.float32)
+            out[:, 8] = np.clip(out[:, 8], z_lo, z_hi).astype(np.float32)
+            if reproj_n > 0 and len(out) > 2:
+                inner, _ = project_points_with_steps_numpy(
+                    model,
+                    np.asarray(out[1:-1], dtype=np.float32),
+                    device=str(device),
+                    proj_steps=reproj_n,
+                    proj_alpha=float(proj_alpha),
+                    proj_min_steps=min(int(proj_min_steps), reproj_n),
+                    f_abs_stop=(None if f_abs_stop is None else float(f_abs_stop)),
+                )
+                out[1:-1] = np.asarray(inner, dtype=np.float32)
+                out[1:-1, 2] = np.clip(out[1:-1, 2], z_lo, z_hi).astype(np.float32)
+                out[1:-1, 8] = np.clip(out[1:-1, 8], z_lo, z_hi).astype(np.float32)
+    polish_steps = int(max(0, path_polish_steps))
+    if polish_steps > 0 and len(out) >= 3:
+        q = torch.tensor(out.astype(np.float32), device=device, requires_grad=True)
+        q_init = torch.tensor(np.asarray(init_path, dtype=np.float32), device=device)
+        q_proj = torch.tensor(out.astype(np.float32), device=device)
+        q0 = torch.tensor(np.asarray(x_start, dtype=np.float32), device=device)
+        qT = torch.tensor(np.asarray(x_goal, dtype=np.float32), device=device)
+        opt = torch.optim.Adam([q], lr=float(path_polish_lr))
+        for _ in range(polish_steps):
+            opt.zero_grad(set_to_none=True)
+            f = model(q)
+            if f.dim() == 1:
+                f = f.unsqueeze(1)
+            loss_man = (f ** 2).mean()
+            v = q[1:] - q[:-1]
+            loss_len = (v ** 2).mean() if len(v) else torch.tensor(0.0, device=q.device)
+            if q.shape[0] >= 3:
+                dv = v[1:] - v[:-1]
+                loss_smooth = (dv ** 2).mean()
+            else:
+                loss_smooth = torch.tensor(0.0, device=q.device)
+            loss_ref_init = ((q - q_init) ** 2).mean()
+            loss_ref_proj = ((q - q_proj) ** 2).mean()
+            loss = (
+                float(path_lam_manifold) * loss_man
+                + float(path_lam_smooth) * loss_smooth
+                + float(path_lam_len) * loss_len
+                + float(path_lam_ref_init) * loss_ref_init
+                + float(path_lam_ref_proj) * loss_ref_proj
+            )
+            loss.backward()
+            opt.step()
+            with torch.no_grad():
+                q[:, 2] = torch.clamp(q[:, 2], min=z_lo, max=z_hi)
+                q[:, 8] = torch.clamp(q[:, 8], min=z_lo, max=z_hi)
+                q[:, 3:6] = torch.remainder(q[:, 3:6] + np.pi, 2.0 * np.pi) - np.pi
+                q[:, 9:12] = torch.remainder(q[:, 9:12] + np.pi, 2.0 * np.pi) - np.pi
+                q[0] = q0
+                q[-1] = qT
+        out = q.detach().cpu().numpy().astype(np.float32)
     out[0] = np.asarray(x_start, dtype=np.float32)
     out[-1] = np.asarray(x_goal, dtype=np.float32)
     out[:, 3:6] = _wrap_pi(out[:, 3:6])
@@ -729,7 +918,7 @@ def _plot_paths(paths: list[np.ndarray], out_path: str, cfg: Any, *, plot_arms: 
         for k, path in enumerate(paths):
             color = colors[k % len(colors)]
             center = centers[k]
-            ax.plot(center[:, 0], center[:, 1], center[:, 2], color=color, lw=2.3, label=f"planned center {k}")
+            ax.plot(center[:, 0], center[:, 1], center[:, 2], color=color, lw=2.3, label=f"path_{k} center")
             ax.scatter(center[[0, -1], 0], center[[0, -1], 1], center[[0, -1], 2], color=color, s=32)
             if plot_arms:
                 ax.plot(path[:, 0], path[:, 1], path[:, 2], color=color, lw=0.9, alpha=0.32)
@@ -750,7 +939,7 @@ def _plot_paths(paths: list[np.ndarray], out_path: str, cfg: Any, *, plot_arms: 
     for k, path in enumerate(paths):
         color = colors[k % len(colors)]
         center = centers[k]
-        ax2.plot(center[:, 0], center[:, 1], color=color, lw=2.3, label=f"planned center {k}")
+        ax2.plot(center[:, 0], center[:, 1], color=color, lw=2.3, label=f"path_{k} center")
         ax2.scatter(center[[0, -1], 0], center[[0, -1], 1], color=color, s=28)
         if plot_arms:
             ax2.plot(path[:, 0], path[:, 1], color=color, lw=0.9, alpha=0.26)
@@ -762,9 +951,18 @@ def _plot_paths(paths: list[np.ndarray], out_path: str, cfg: Any, *, plot_arms: 
     ax2.set_ylabel("y")
     ax2.set_title("Top-Down (2D XY Projection)")
     ax2.grid(alpha=0.22)
+    ax2.legend(loc="best", fontsize=8)
 
     ax_blank = fig.add_subplot(2, 3, 6)
     ax_blank.axis("off")
+    legend_handles = [
+        plt.Line2D([0], [0], color="#334155", lw=1.5, linestyle="--", label="centerline"),
+        plt.Line2D([0], [0], color="#94a3b8", lw=1.0, label="z bounds"),
+    ]
+    for k in range(len(paths)):
+        color = colors[k % len(colors)]
+        legend_handles.append(plt.Line2D([0], [0], color=color, lw=2.3, label=f"path_{k} center"))
+    ax_blank.legend(handles=legend_handles, loc="center left", fontsize=10, frameon=False, title="Legend")
 
     fig.suptitle("12D dual-arm learned-constraint planning")
     fig.tight_layout()
@@ -781,7 +979,14 @@ def _parse_args() -> argparse.Namespace:
     ap.add_argument("--n-trajs", type=int, default=3)
     ap.add_argument("--n-waypoints", type=int, default=80)
     ap.add_argument("--planner-mode", choices=["traj_opt", "point_project", "init_only"], default="point_project")
-    ap.add_argument("--init-mode", choices=["task", "center", "center_interp", "nearest_demo", "linear"], default="nearest_demo")
+    ap.add_argument(
+        "--traj-opt-objective",
+        choices=["minimal", "minimal_zsmooth", "minimal_refinit", "minimal_refinit_zlinear", "full"],
+        default="minimal",
+        help="minimal: only learned-manifold loss; minimal_zsmooth: add only center-z second-difference smoothing; minimal_refinit: add only weak init-path trust; minimal_refinit_zlinear: weak init-path trust plus linear center-z reference from start to goal; full: include all trajectory regularizers.",
+    )
+    ap.add_argument("--init-mode", choices=["task", "nearest_demo", "linear"], default="nearest_demo")
+    ap.add_argument("--nearest-demo-center-blend", type=float, default=0.0)
     ap.add_argument("--reference-mode", choices=["none", "circle"], default="none")
     ap.add_argument("--circle-bulge-ratio", type=float, default=0.35)
     ap.add_argument("--roundtrip", type=int, default=0, help="If 1, save/use path as start->goal->start.")
@@ -795,10 +1000,29 @@ def _parse_args() -> argparse.Namespace:
     ap.add_argument("--lam-len", type=float, default=0.03)
     ap.add_argument("--lam-smooth", type=float, default=0.10)
     ap.add_argument("--lam-ref-path", type=float, default=5.0)
+    ap.add_argument("--lam-center-z-ref", type=float, default=10.0)
+    ap.add_argument("--lam-center-z-smooth", type=float, default=2.0)
     ap.add_argument("--trust-scale", type=float, default=0.03)
-    ap.add_argument("--proj-steps", type=int, default=100)
-    ap.add_argument("--proj-alpha", type=float, default=0.25)
+    ap.add_argument(
+        "--traj-resample-center-arclength",
+        type=int,
+        default=1,
+        help="1 to reparameterize traj_opt output uniformly by center-path arclength, reducing waypoint collapse/stalls.",
+    )
+    ap.add_argument("--proj-steps", type=int, default=80)
+    ap.add_argument("--proj-alpha", type=float, default=0.08)
     ap.add_argument("--proj-min-steps", type=int, default=20)
+    ap.add_argument("--point-polish-iters", type=int, default=2)
+    ap.add_argument("--point-center-z-smooth", type=float, default=0.25)
+    ap.add_argument("--point-center-z-ref", type=float, default=0.15)
+    ap.add_argument("--point-reproj-steps", type=int, default=10)
+    ap.add_argument("--point-path-polish-steps", type=int, default=0)
+    ap.add_argument("--point-path-polish-lr", type=float, default=0.01)
+    ap.add_argument("--point-lam-manifold", type=float, default=1.0)
+    ap.add_argument("--point-lam-smooth", type=float, default=6.0)
+    ap.add_argument("--point-lam-len", type=float, default=0.4)
+    ap.add_argument("--point-lam-ref-init", type=float, default=1.5)
+    ap.add_argument("--point-lam-ref-proj", type=float, default=1.0)
     ap.add_argument("--enforce-z-bounds", type=int, default=1, help="Clamp only TCP z dims [2,8] to task z bounds during traj_opt.")
     ap.add_argument("--plot-arms", type=int, default=1)
     return ap.parse_args()
@@ -858,7 +1082,14 @@ def main() -> None:
         elif str(args.init_mode) == "center_interp":
             init = _center_interp_init_path(start, goal, int(args.n_waypoints))
         elif str(args.init_mode) == "nearest_demo":
-            init = _nearest_demo_init_path(start, goal, x_train, cfg, int(args.n_waypoints))
+            init = _nearest_demo_init_path(
+                start,
+                goal,
+                x_train,
+                cfg,
+                int(args.n_waypoints),
+                center_interp_blend=float(args.nearest_demo_center_blend),
+            )
         else:
             init = build_linear_path(start, goal, n_waypoints=int(args.n_waypoints), periodic=False)
         if str(args.reference_mode) == "circle":
@@ -879,11 +1110,23 @@ def main() -> None:
                 init,
                 x_start=start,
                 x_goal=goal,
+                task_cfg=cfg,
                 device=device,
                 proj_steps=int(args.proj_steps),
                 proj_alpha=float(args.proj_alpha),
                 proj_min_steps=int(args.proj_min_steps),
                 f_abs_stop=proj_eps_stop,
+                polish_iters=int(args.point_polish_iters),
+                center_z_smooth=float(args.point_center_z_smooth),
+                center_z_ref=float(args.point_center_z_ref),
+                reproj_steps=int(args.point_reproj_steps),
+                path_polish_steps=int(args.point_path_polish_steps),
+                path_polish_lr=float(args.point_path_polish_lr),
+                path_lam_manifold=float(args.point_lam_manifold),
+                path_lam_smooth=float(args.point_lam_smooth),
+                path_lam_len=float(args.point_lam_len),
+                path_lam_ref_init=float(args.point_lam_ref_init),
+                path_lam_ref_proj=float(args.point_lam_ref_proj),
             )
         else:
             path = plan_path(
@@ -898,6 +1141,8 @@ def main() -> None:
                 init_path=init,
                 keep_endpoints=True,
             ).astype(np.float32)
+            if bool(int(args.traj_resample_center_arclength)):
+                path = _resample_path_center_arclength(path, int(args.n_waypoints))
             path[:, 3:6] = _wrap_pi(path[:, 3:6])
             path[:, 9:12] = _wrap_pi(path[:, 9:12])
         if int(args.roundtrip) == 1:
@@ -930,12 +1175,31 @@ def main() -> None:
         "n_trajs": int(args.n_trajs),
         "n_waypoints": int(args.n_waypoints),
         "planner_mode": str(args.planner_mode),
+        "traj_opt_objective": str(args.traj_opt_objective),
         "init_mode": str(args.init_mode),
         "reference_mode": str(args.reference_mode),
         "circle_bulge_ratio": float(args.circle_bulge_ratio),
+        "nearest_demo_center_blend": float(args.nearest_demo_center_blend),
+        "point_project": {
+            "proj_steps": int(args.proj_steps),
+            "proj_alpha": float(args.proj_alpha),
+            "proj_min_steps": int(args.proj_min_steps),
+            "polish_iters": int(args.point_polish_iters),
+            "center_z_smooth": float(args.point_center_z_smooth),
+            "center_z_ref": float(args.point_center_z_ref),
+            "reproj_steps": int(args.point_reproj_steps),
+            "path_polish_steps": int(args.point_path_polish_steps),
+            "path_polish_lr": float(args.point_path_polish_lr),
+            "lam_manifold": float(args.point_lam_manifold),
+            "lam_smooth": float(args.point_lam_smooth),
+            "lam_len": float(args.point_lam_len),
+            "lam_ref_init": float(args.point_lam_ref_init),
+            "lam_ref_proj": float(args.point_lam_ref_proj),
+        },
         "pair_min_center_dist_used": float(pair_min_center_dist),
         "pair_max_center_dist_used": float(pair_max_center_dist),
         "roundtrip": int(args.roundtrip),
+        "traj_resample_center_arclength": int(args.traj_resample_center_arclength),
         "planner": plan_cfg.planner,
         "paths": summaries,
     }

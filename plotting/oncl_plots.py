@@ -12,7 +12,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from matplotlib.ticker import MaxNLocator
 from torch import nn
 
-from evaluation.evaluator import DEFAULT_EVAL_CFG, eval_bounds_from_train
+from evaluation.evaluator import DEFAULT_EVAL_CFG, eval_bounds_from_train, resolve_gt_grid
 from datasets.constraint_datasets import generate_dataset, sine_surface_z_and_normal_from_xy
 from datasets.ur5_pybullet_utils import (
     UR5_LINK_LENGTHS,
@@ -318,6 +318,7 @@ def _plot_constraint_surface_paper_3d(
     axis_labels: tuple[str, str, str],
     cfg: Any,
     intersection_points: np.ndarray | None = None,
+    dataset_name: str | None = None,
 ) -> None:
     # Paper-oriented variant: keep only the combined (third) view.
     mins, maxs = eval_bounds_from_train(x_train, cfg)
@@ -399,9 +400,33 @@ def _plot_constraint_surface_paper_3d(
     if len(p12) > 1200:
         p12 = p12[np.random.choice(len(p12), size=1200, replace=False)]
 
-    train_plot = x_train
-    if len(train_plot) > int(cfg.plot_train_max_points):
-        train_plot = train_plot[np.random.choice(len(train_plot), size=int(cfg.plot_train_max_points), replace=False)]
+    gt_plot = None
+    if dataset_name is not None:
+        try:
+            gt_plot = resolve_gt_grid(str(dataset_name), cfg, x_train=x_train)
+        except Exception:
+            gt_plot = None
+
+    def _order_curve_points(points: np.ndarray) -> np.ndarray:
+        if points.ndim != 2 or points.shape[0] < 3:
+            return points
+        center = np.mean(points, axis=0, keepdims=True)
+        dist_to_center = np.linalg.norm(points - center, axis=1)
+        start_idx = int(np.argmax(dist_to_center))
+        remaining = np.ones(points.shape[0], dtype=bool)
+        order = [start_idx]
+        remaining[start_idx] = False
+        current = start_idx
+        for _ in range(points.shape[0] - 1):
+            rest_idx = np.flatnonzero(remaining)
+            if len(rest_idx) == 0:
+                break
+            d = np.linalg.norm(points[rest_idx] - points[current], axis=1)
+            nxt = int(rest_idx[int(np.argmin(d))])
+            order.append(nxt)
+            remaining[nxt] = False
+            current = nxt
+        return points[np.asarray(order, dtype=np.int32)]
 
     def _latex_axis_label(lbl: str) -> str:
         s = str(lbl).strip()
@@ -411,10 +436,6 @@ def _plot_constraint_surface_paper_3d(
         return s
 
     def _draw_common(ax) -> None:
-        ax.scatter(
-            train_plot[:, 0], train_plot[:, 1], train_plot[:, 2],
-            s=4, c="#4b5563", alpha=0.28, label="Training data"
-        )
         ax.set_xlabel(_latex_axis_label(axis_labels[0]), fontsize=8, labelpad=1)
         ax.set_ylabel(_latex_axis_label(axis_labels[1]), fontsize=8, labelpad=1)
         # Place q3 label near the top end of the z-axis itself.
@@ -464,9 +485,10 @@ def _plot_constraint_surface_paper_3d(
     ):
         fig = plt.figure(figsize=(3.45, 2.9))
         ax = fig.add_subplot(111, projection="3d")
-        h1_label = r"$h_1(x)$"
-        h2_label = r"$h_2(x)$"
+        h1_label = r"$h_{\theta}^{(1)} = 0$"
+        h2_label = r"$h_{\theta}^{(2)} = 0$"
         int_label = "Learned equality constraint"
+        gt_label = "True constraint"
 
         if rendered and verts1 is not None and faces1 is not None and verts2 is not None and faces2 is not None:
             _add_surface(ax, verts1, faces1, "#22d3ee", 0.12, h1_label)
@@ -477,11 +499,29 @@ def _plot_constraint_surface_paper_3d(
             if len(p2) > 0:
                 ax.scatter(p2[:, 0], p2[:, 1], p2[:, 2], s=0.9, c="#f472b6", alpha=0.20, label=h2_label)
 
-        # Learned equality constraint: scatter points.
+        if gt_plot is not None and len(gt_plot) > 1:
+            gt_line = _order_curve_points(gt_plot)
+            ax.plot(
+                gt_line[:, 0],
+                gt_line[:, 1],
+                gt_line[:, 2],
+                color="#374151",
+                linewidth=3.2,
+                alpha=0.92,
+                label=gt_label,
+            )
+
         if len(p12) > 0:
-            ax.scatter(
-                p12[:, 0], p12[:, 1], p12[:, 2],
-                s=1.25, c="#ef4444", alpha=0.90, depthshade=False, linewidths=0.0, label=int_label
+            p12_line = _order_curve_points(p12)
+            ax.plot(
+                p12_line[:, 0],
+                p12_line[:, 1],
+                p12_line[:, 2],
+                color="#ef4444",
+                linewidth=0.85,
+                linestyle=(0, (2.4, 1.4)),
+                alpha=0.98,
+                label=int_label,
             )
 
         _draw_common(ax)

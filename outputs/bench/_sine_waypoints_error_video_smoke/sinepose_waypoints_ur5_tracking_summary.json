@@ -1,0 +1,63 @@
+{
+  "task": "sinepose_waypoints_tracking",
+  "dataset": "6d_workspace_sine_surface_pose_traj",
+  "ckpt": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/paper_mix_2d_3d6d_traj_vs_nontraj_7seed/oncl/6d_workspace_sine_surface_pose_traj_oncl_model.pt",
+  "seed": 0,
+  "n_waypoints": 11,
+  "planner_waypoints_per_segment": 52,
+  "planner_pose_waypoints_total": 511,
+  "ik_method": "pybullet",
+  "ik": {
+    "mean_pos_err": 0.0008624152396805584,
+    "max_pos_err": 0.0017179680289700627,
+    "mean_ori_err_deg": 0.014739119674537738,
+    "max_ori_err_deg": 0.02329029139929557,
+    "mean_iters": 64.0
+  },
+  "tracking": {
+    "mean_pos_track_err": 0.018121039494872093,
+    "max_pos_track_err": 0.035662781447172165,
+    "mean_ori_track_err_deg": 9.426888465881348,
+    "max_ori_track_err_deg": 16.99962043762207,
+    "mean_joint_err_norm": 0.0038623823784291744,
+    "max_joint_err_norm": 0.006199842318892479
+  },
+  "planned_constraint_error": {
+    "mean_surface_pos_err": 0.0040883636102080345,
+    "std_surface_pos_err": 0.003729881951585412,
+    "max_surface_pos_err": 0.016382575035095215,
+    "mean_surface_ori_err_deg": 1.7864948511123657,
+    "std_surface_ori_err_deg": 0.7635528445243835,
+    "max_surface_ori_err_deg": 3.615521192550659
+  },
+  "executed_constraint_error": {
+    "mean_surface_pos_err": 0.00396827282384038,
+    "std_surface_pos_err": 0.0036210529506206512,
+    "max_surface_pos_err": 0.015448927879333496,
+    "mean_surface_ori_err_deg": 1.7683993577957153,
+    "std_surface_ori_err_deg": 0.7592562437057495,
+    "max_surface_ori_err_deg": 3.412198066711426
+  },
+  "render": {
+    "camera_distance": 1.85,
+    "camera_yaw": 38.0,
+    "camera_pitch": -42.0,
+    "camera_fov": 52.0,
+    "camera_target": [
+      0.1,
+      -0.18,
+      1.02
+    ],
+    "waypoint_marker_radius": 0.006
+  },
+  "outputs": {
+    "video": null,
+    "error_video": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/_sine_waypoints_error_video_smoke/sinepose_waypoints_ur5_tracking_errors.mp4",
+    "tracking_overview_plot": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/_sine_waypoints_error_video_smoke/sinepose_waypoints_tracking_overview.png",
+    "distribution_plot": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/_sine_waypoints_error_video_smoke/sinepose_waypoints_tracking_error_distribution_paper.png",
+    "tracking_error_plot": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/_sine_waypoints_error_video_smoke/sinepose_waypoints_ur5_tracking_errors.png",
+    "planned_pointwise_csv": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/_sine_waypoints_error_video_smoke/sinepose_waypoints_planned_pointwise_errors.csv",
+    "executed_pointwise_csv": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/_sine_waypoints_error_video_smoke/sinepose_waypoints_executed_pointwise_errors.csv",
+    "arrays": "/home/baiyu/PycharmProjects/LearnEqConstraints/outputs/bench/_sine_waypoints_error_video_smoke/sinepose_waypoints_ur5_tracking_arrays.npz"
+  }
+}
