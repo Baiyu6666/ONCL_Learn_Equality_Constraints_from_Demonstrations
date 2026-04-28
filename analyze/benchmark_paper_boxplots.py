@@ -30,7 +30,7 @@ PAPER_DATASET_LABELS = {
     "3d_planar_arm_line_n3_traj": "3DPlanarArmLine",
     "3d_spatial_arm_ellip_n3_traj": "3DArmEllipse",
     "3d_twosphere_traj": "3DTwoSphere",
-    "3d_vz_2d_ellipse_traj": "3DTwistedEliip",
+    "3d_vz_2d_ellipse_traj": "3DTwistEllipse",
     "3d_torus_surface_traj": "3DTorus",
     "6d_spatial_arm_up_n6_py_traj": "6DArmUp",
     "6d_workspace_sine_surface_pose_traj": "6DSinePose",
