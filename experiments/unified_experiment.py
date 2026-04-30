@@ -15,26 +15,26 @@ from torch import nn
 from datasets.constraint_datasets import set_seed
 from experiments.dataset_resolve import resolve_dataset
 from evaluation.eval_runner import run_eval_metrics
-from models.projection import (
+from methods.utils.projection import (
     project_trajectory_numpy,
     project_points_with_steps_numpy,
     true_projection,
 )
-from models.planner import (
+from planning.planner import (
     plan_path,
     _plot_planar_arm_planning,
     plan_linear_then_model_project,
     resolve_periodic_mode,
 )
-from models.autoencoder import VariationalAutoEncoder
-from models.kinematics import (
+from methods.models.autoencoder import VariationalAutoEncoder
+from planning.kinematics import (
     is_arm_dataset as _is_arm_dataset,
     is_workspace_pose_dataset as _is_workspace_pose_dataset,
     workspace_embed_for_eval as _workspace_embed_for_eval,
     wrap_np_pi as _wrap_np_pi,
     wrap_workspace_pose_rpy_np as _wrap_workspace_pose_rpy_np,
 )
-from models.feature_normalizer import FeatureNormalizedModel, FeatureNormalizer
+from methods.utils.feature_normalizer import FeatureNormalizedModel, FeatureNormalizer
 from methods import dataaug as dataaug_method
 from methods import vae as vae_base
 from plotting import vae_plots as vae_plots

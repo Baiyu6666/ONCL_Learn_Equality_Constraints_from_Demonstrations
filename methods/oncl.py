@@ -35,20 +35,20 @@ from plotting.dataaug_plots import plot_planned_paths
 from methods import dataaug as dataaug_method
 from experiments.dataset_resolve import resolve_dataset
 from evaluation.eval_runner import run_eval_metrics
-from models.kinematics import (
+from planning.kinematics import (
     is_arm_dataset as _is_arm_dataset,
     is_workspace_pose_dataset as _is_workspace_pose_dataset,
     workspace_embed_for_eval as shared_workspace_embed_for_eval,
     wrap_np_pi as _wrap_np_pi,
     wrap_workspace_pose_rpy_np as _wrap_workspace_pose_rpy_np,
 )
-from models.projection import (
+from methods.utils.projection import (
     project_points_with_steps_numpy,
     project_trajectory_numpy,
 )
-from models.mlp import MLP
-from models.planner import plan_path
-from models.planner import _plot_planar_arm_planning
+from methods.models.mlp import MLP
+from planning.planner import plan_path
+from planning.planner import _plot_planar_arm_planning
 from methods.codim_utils import estimate_codim_local_pca
 
 DEFAULT_DATASETS = [

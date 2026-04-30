@@ -4,7 +4,7 @@ from typing import Any
 
 import numpy as np
 
-from models.kinematics import wrap_np_pi as _wrap_np_pi
+from planning.kinematics import wrap_np_pi as _wrap_np_pi
 
 
 def _local_neighbors(x: np.ndarray, idx: int, k: int, periodic_joint: bool) -> np.ndarray:

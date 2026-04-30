@@ -21,19 +21,19 @@ from datasets.ur5_pybullet_utils import (
     resolve_ur5_kinematics_cfg,
     resolve_ur5_render_cfg,
 )
-from models.kinematics import (
+from planning.kinematics import (
     is_arm_dataset,
     planar_fk,
     spatial_fk,
     spatial_tool_axis_n6,
 )
-from models.planner import (
+from planning.planner import (
     init_path_joint_spline,
     init_path_via_workspace_ik,
     pick_far_pair_workspace_planar,
     plan_path,
 )
-from models.projection import project_trajectory_numpy
+from methods.utils.projection import project_trajectory_numpy
 from plotting.plot_common import plot_contour_traj_2d
 
 N6_WORKSPACE_VIS_POINTS_DEFAULT = 90
@@ -474,6 +474,10 @@ def _plot_constraint_surface_paper_3d(
         ax.add_collection3d(poly)
 
     # Match paper boxplot compact typography style.
+    fig_size = (3.45, 2.9)
+    if str(dataset_name) == "3d_vz_2d_ellipse_traj":
+        fig_size = (3.05, 2.55)
+
     with plt.rc_context(
         {
             "font.size": 8,
@@ -483,7 +487,7 @@ def _plot_constraint_surface_paper_3d(
             "legend.fontsize": 7,
         }
     ):
-        fig = plt.figure(figsize=(3.45, 2.9))
+        fig = plt.figure(figsize=fig_size)
         ax = fig.add_subplot(111, projection="3d")
         h1_label = r"$h_{\theta}^{(1)} = 0$"
         h2_label = r"$h_{\theta}^{(2)} = 0$"
@@ -1206,7 +1210,7 @@ def _plot_planar_arm_planning(
     cfg: Any,
     render_pybullet: bool = True,
 ) -> list[np.ndarray]:
-    from models.planner import _plot_planar_arm_planning as _core_plot_planar_arm_planning
+    from planning.planner import _plot_planar_arm_planning as _core_plot_planar_arm_planning
 
     return _core_plot_planar_arm_planning(
         model=model,

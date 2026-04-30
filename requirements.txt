@@ -1,10 +1,27 @@
+# Core numerical and ML stack
 numpy
 scipy
+torch
+scikit-learn
+
+# Data handling
+pandas
+dill
+PyYAML
+tqdm
+
+# Visualization and image/video utilities
 matplotlib
 scikit-image
-PyYAML
-torch
+Pillow
+imageio
+plotly
+
+# Logging / experiment tracking
 wandb
+
+# Simulation
 pybullet
 
+# Integrated ECoMaNN dependency
 -e ./smp_manifold_learning-master

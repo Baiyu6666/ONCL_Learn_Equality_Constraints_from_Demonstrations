@@ -22,7 +22,7 @@ from evaluation.evaluator import (
 )
 from experiments.dataset_resolve import resolve_dataset
 from evaluation.eval_runner import run_eval_metrics
-from models.kinematics import (
+from planning.kinematics import (
     is_arm_dataset as _is_arm_dataset,
     planar_fk as _planar_fk,
     spatial_fk_n3 as _spatial_fk_n3,
@@ -30,16 +30,16 @@ from models.kinematics import (
     workspace_embed_for_eval as shared_workspace_embed_for_eval,
     wrap_np_pi as _wrap_np_pi,
 )
-from models.feature_normalizer import FeatureNormalizer
-from models.projection import (
+from methods.utils.feature_normalizer import FeatureNormalizer
+from methods.utils.projection import (
     project_points_with_steps_numpy,
     project_trajectory_numpy,
     project_trajectory_tensor,
     true_distance,
     true_projection,
 )
-from models.mlp import MLP
-from models.planner import plan_path
+from methods.models.mlp import MLP
+from planning.planner import plan_path
 from plotting.dataaug_plots import (
     plot_contour_and_trajectory,
     plot_contour_only,

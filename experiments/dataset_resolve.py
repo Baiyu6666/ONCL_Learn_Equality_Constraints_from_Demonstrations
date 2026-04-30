@@ -364,7 +364,7 @@ def _traj_points_ur5_local_walk(
     t_len = max(2, int(traj_len))
     rng = np.random.default_rng(int(seed) + 2401)
 
-    from models.kinematics import spatial_fk
+    from planning.kinematics import spatial_fk
     from datasets.ur5_pybullet_utils import UR5_LINK_LENGTHS
 
     eg = _angle_embed(qg)
@@ -584,7 +584,7 @@ def _sample_ur5_upward_traj_direct_analytic(
         d = np.abs(a.astype(np.float32) - b.astype(np.float32))
         return np.minimum(d, (2.0 * np.pi - d)).astype(np.float32)
 
-    from models.kinematics import spatial_fk
+    from planning.kinematics import spatial_fk
     from datasets.ur5_pybullet_utils import UR5_LINK_LENGTHS
 
     def _ee_pos(q: np.ndarray) -> np.ndarray:
